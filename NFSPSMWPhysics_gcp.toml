@@ -1,0 +1,8 @@
+mw_physics_grip = true			# MW physics in grip events
+mw_physics_speed = true			# MW physics in speed events
+mw_physics_drag = false			# MW physics in drag events - wheelies, burnouts and perfect shifts are currently broken with this on
+mw_physics_drift = false		# MW physics in drift events
+mw_physics_opponents = false		# set to true to have MW physics for opponents instead of just the player
+mw_opponent_rubberband = 0.0		# rubberbanding factor if affect_opponents is true, 0.0 to disable
+speedbreaker = true			# enables speedbreaker (toggle with X on the keyboard or the X button on the controller)
+rev_limiter = true			# enables the rev limiter, set to false to have higher RPMs
