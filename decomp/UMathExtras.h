@@ -21,6 +21,85 @@ inline float bClamp(float a, float MINIMUM, float MAXIMUM) {
 }
 
 namespace UMath {
+	class Vector2 {
+	public:
+		float x, y;
+	};
+
+	class Vector3 : public NyaVec3 {
+	public:
+		using NyaVec3::NyaVec3;
+
+		Vector3(const NyaVec3& v) : NyaVec3(v) {}
+	};
+
+	class Vector4 : public NyaVec4 {
+	public:
+		using NyaVec4::NyaVec4;
+
+		Vector4(const NyaVec4& v) : NyaVec4(v) {}
+	};
+
+	class Matrix4 : public NyaMat4x4 {
+	public:
+		using NyaMat4x4::NyaMat4x4;
+
+		Matrix4(const NyaMat4x4& m) : NyaMat4x4(m) {}
+	};
+
+	inline void Transpose(UMath::Matrix4* m, UMath::Matrix4 &result) {
+		for (int i = 0; i < 4; ++i) {
+			for (int j = 0; j < 4; ++j) {
+				result.GetVector(i)[j] = m->GetVector(j)[i];
+			}
+		}
+	}
+
+	inline void Transpose(const UMath::Vector4 &a, UMath::Vector4 &result) {
+		result.x = -a.x;
+		result.y = -a.y;
+		result.z = -a.z;
+		result.w = a.w;
+	}
+
+	void Rotate(const UMath::Vector3 *v, const UMath::Vector4 *q, UMath::Vector3 *result) {
+		double v3; // fp0
+		double v4; // fp5
+		double v5; // fp10
+		double v6; // fp13
+
+		v3 = ((q->x * ((v->z * q->w) + ((q->x * v->y) - (v->x * q->y))))
+			  - (q->z * ((v->x * q->w) + ((q->y * v->z) - (q->z * v->y)))));
+		v4 = ((q->y * ((v->x * q->w) + ((q->y * v->z) - (q->z * v->y))))
+			  - (q->x * ((v->y * q->w) + ((v->x * q->z) - (q->x * v->z)))));
+		v5 = ((q->w * ((v->y * q->w) + ((v->x * q->z) - (q->x * v->z))))
+			  + (q->y * ((q->x * v->x) + ((q->z * v->z) + (q->y * v->y)))));
+		v6 = ((q->w * ((v->z * q->w) + ((q->x * v->y) - (v->x * q->y))))
+			  + (q->z * ((q->x * v->x) + ((q->z * v->z) + (q->y * v->y)))));
+		result->x = ((((v->x * q->w) + ((q->y * v->z) - (q->z * v->y))) * q->w)
+					 + (q->x * ((q->x * v->x) + ((q->z * v->z) + (q->y * v->y)))))
+					- ((q->z * ((v->y * q->w) + ((v->x * q->z) - (q->x * v->z))))
+					   - (q->y * ((v->z * q->w) + ((q->x * v->y) - (v->x * q->y)))));
+		result->y = v5 - v3;
+		result->z = v6 - v4;
+	}
+
+	inline void Mult(const UMath::Matrix4 m1, const UMath::Matrix4 m2, UMath::Matrix4 &result) {
+		for (int j = 0; j < 4; ++j) {
+			result.x[j] = m1.x[0] * m2.x[j] + m1.x[1] * m2.y[j] + m1.x[2] * m2.z[j] + m1.x[3] * m2.p[j];
+			result.y[j] = m1.y[0] * m2.x[j] + m1.y[1] * m2.y[j] + m1.y[2] * m2.z[j] + m1.y[3] * m2.p[j];
+			result.z[j] = m1.z[0] * m2.x[j] + m1.z[1] * m2.y[j] + m1.z[2] * m2.z[j] + m1.z[3] * m2.p[j];
+			result.p[j] = m1.p[0] * m2.x[j] + m1.p[1] * m2.y[j] + m1.p[2] * m2.z[j] + m1.p[3] * m2.p[j];
+		}
+	}
+
+	inline void Mult(const UMath::Vector4* b, const UMath::Vector4* a, UMath::Vector4 &dest) {
+		dest.x = a->y * b->z - a->z * b->y + a->w * b->x + a->x * b->w;
+		dest.y = a->z * b->x - a->x * b->z + a->w * b->y + a->y * b->w;
+		dest.z = a->x * b->y - a->y * b->x + a->w * b->z + a->z * b->w;
+		dest.w = a->w * b->w - a->x * b->x - a->y * b->y - a->z * b->z;
+	}
+
 	inline Vector4 Vector4Make(const Vector3 &c, float w) {
 		Vector4 res;
 		res.x = c.x;
@@ -162,4 +241,49 @@ namespace UMath {
 		}
 		return retval;
 	}
+}
+
+UMath::Vector3 CalculateInertiaTensor(UMath::Vector3 tensorScale, float mass, UMath::Vector3 dim) {
+	UMath::Vector3 out;
+	out.x = ((dim.z * 2.0 * dim.z * 2.0) + (dim.y * 2.0 * dim.y * 2.0)) * 0.083333336 * mass * tensorScale.x;
+	out.y = ((dim.z * 2.0 * dim.z * 2.0) + (dim.x * 2.0 * dim.x * 2.0)) * 0.083333336 * mass * tensorScale.y;
+	out.z = ((dim.y * 2.0 * dim.y * 2.0) + (dim.x * 2.0 * dim.x * 2.0)) * 0.083333336 * mass * tensorScale.z;
+	return out;
+}
+
+UMath::Matrix4 GetInverseWorldTensor(UMath::Vector3 inertiaTensor, UMath::Matrix4 orientation) {
+	if (inertiaTensor.x > 0.000001) {
+		inertiaTensor.x = (1.0 / inertiaTensor.x);
+	}
+	if (inertiaTensor.y > 0.000001) {
+		inertiaTensor.y = (1.0 / inertiaTensor.y);
+	}
+	if (inertiaTensor.z > 0.000001) {
+		inertiaTensor.z = (1.0 / inertiaTensor.z);
+	}
+
+	UMath::Matrix4 out = {};
+	out.x.x = inertiaTensor.x;
+	out.y.y = inertiaTensor.y;
+	out.z.z = inertiaTensor.z;
+	out.pw = 1.0;
+
+	UMath::Matrix4 v8;
+	UMath::Matrix4 v9;
+	UMath::Transpose(&orientation, v9);
+	UMath::Mult(out, orientation, v8);
+	UMath::Mult(v9, v8, out);
+	return out;
+}
+
+class SimSurface {
+public:
+	float LATERAL_GRIP = 1.0;
+	float DRIVE_GRIP = 1.0;
+	float ROLLING_RESISTANCE = 1.0;
+};
+
+SimSurface* GetSimSurface(int surfaceType) {
+	static SimSurface tmp;
+	return &tmp;
 }

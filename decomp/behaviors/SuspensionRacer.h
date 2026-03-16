@@ -3,7 +3,7 @@ class SuspensionRacerMW : public ChassisMW {
   public:
 	class Tire : public WheelMW {
 	  public:
-		Tire(float radius, int index, const Attrib::Gen::vehicle *specs, MWCarTuning* mwSpecs);
+		Tire(float radius, int index, MWCarTuning* mwSpecs);
 		void BeginFrame(float max_slip, float grip_boost, float traction_boost, float drag_reduction);
 		void EndFrame(float dT);
 		float ComputeLateralForce(float load, float slip_angle);
@@ -153,7 +153,6 @@ class SuspensionRacerMW : public ChassisMW {
 		float mLastTorque;
 		const int mWheelIndex;
 		float mRoadSpeed;
-		const Attrib::Gen::vehicle *mSpecs;
 		const MWCarTuning *mMWSpecs;
 		float mAngularAcc;
 		const int mAxleIndex;
@@ -173,27 +172,24 @@ class SuspensionRacerMW : public ChassisMW {
 	};
 
 	// Methods
-	void Create(const BehaviorParams &bp);
+	void Create(Car* car);
 	void Destroy(char a2);
 	void CreateTires();
 	void OnTaskSimulate(float dT);
-	void DoDrifting(const ChassisMW::State &state);
-	void TuneWheelParams(ChassisMW::State &state);
-	void DoWheelForces(ChassisMW::State &state);
-	float CalculateMaxSteering(ChassisMW::State &state, ISteeringWheel::SteeringType steer_type);
-	float CalculateSteeringSpeed(ChassisMW::State &state);
-	void DoWallSteer(ChassisMW::State &state);
-	void DoDriveForces(ChassisMW::State &state);
-	float DoHumanSteering(ChassisMW::State &state);
-	float DoAISteering(ChassisMW::State &state);
-	void DoSteering(ChassisMW::State &state, UMath::Vector3 &right, UMath::Vector3 &left);
-	void DoAerobatics(ChassisMW::State &state);
+	void DoDrifting(const State &state);
+	void TuneWheelParams(State &state);
+	void DoWheelForces(State &state);
+	float CalculateMaxSteering(State &state, SteeringType steer_type);
+	float CalculateSteeringSpeed(State &state);
+	void DoWallSteer(State &state);
+	void DoDriveForces(State &state);
+	float DoHumanSteering(State &state);
+	float DoAISteering(State &state);
+	void DoSteering(State &state, UMath::Vector3 &right, UMath::Vector3 &left);
+	void DoAerobatics(State &state);
 	float CalcYawControlLimit(float speed);
 
 	// Overrides
-	void OnCollision(const Sim::Collision::Info &cinfo);
-	void OnBehaviorChange(const UCrc32 &mechanic);
-	void OnAttributeChange(const Attrib::Collection *aspec, unsigned int attribkey);
 	Meters GetRideHeight(unsigned int idx);
 	Radians GetWheelAngularVelocity(int index);
 	void MatchSpeed(float speed);
@@ -242,7 +238,7 @@ class SuspensionRacerMW : public ChassisMW {
 	bool IsWheelOnGround(unsigned int i) {
 		return mTires[i]->IsOnGround();
 	}
-	const SimSurface *GetWheelRoadSurface(unsigned int i) {
+	int GetWheelRoadSurface(unsigned int i) {
 		return mTires[i]->GetSurface();
 	}
 	const UMath::Vector3 *GetWheelVelocity(unsigned int i) {
@@ -410,7 +406,6 @@ class SuspensionRacerMW : public ChassisMW {
 		return *mTires[i];
 	}
 
-	IHumanAI *mHumanAI;
 	float mGameBreaker;
 	unsigned int mNumWheelsOnGround;
 	float mLastGroundCollision;
@@ -418,19 +413,6 @@ class SuspensionRacerMW : public ChassisMW {
 	Burnout mBurnOut;
 	Steering mSteering;
 	Tire *mTires[4];
-
-	struct TempCollisionListener {
-		void* vtable;
-		void* vt_OnCollision = (void*)&TempCollisionListener::OnCollision;
-
-		SuspensionRacerMW* GetSuspensionRacer() {
-			auto ptr = (uintptr_t)this;
-			ptr -= offsetof(SuspensionRacerMW, tmpCollisionListener);
-			return (SuspensionRacerMW*)ptr;
-		}
-
-		void OnCollision(const Sim::Collision::Info *cinfo);
-	} tmpCollisionListener;
 
 	void ApplyVehicleEntryForces(bool enteringVehicle, const UMath::Vector3 &pos, bool calledfromEvent) {}
 	float GetDynamicRideHeight(unsigned int idx, State*) { SUSPENSIONRACER_FUNCTION_LOG("GetDynamicRideHeight"); return GetRideHeight(idx); }

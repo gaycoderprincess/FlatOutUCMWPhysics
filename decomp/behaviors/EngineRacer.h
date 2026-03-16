@@ -69,10 +69,10 @@ namespace Physics {
 			return 0.0f;
 		}
 
-		float WheelDiameter(const Attrib::Gen::vehicle& tires, bool front) {
+		float WheelDiameter(const MWCarTuning* tires, bool front) {
 			int axle = front ? 0 : 1;
-			float diameter = INCH2METERS(tires.GetLayout()->RIM_SIZE.At(axle));
-			return diameter + tires.GetLayout()->SECTION_WIDTH.At(axle) * 0.001f * 2.0f * (tires.GetLayout()->ASPECT_RATIO.At(axle) * 0.01f);
+			float diameter = INCH2METERS(tires->RIM_SIZE.At(axle));
+			return diameter + tires->SECTION_WIDTH.At(axle) * 0.001f * 2.0f * (tires->ASPECT_RATIO.At(axle) * 0.01f);
 		}
 
 		// Credits: Brawltendo
@@ -95,14 +95,14 @@ namespace Physics {
 		}
 
 		// Credits: Brawltendo
-		Mps Speedometer(const MWCarTuning* mw, const Attrib::Gen::vehicle& engine, Rpm rpm, GearID gear, const Tunings *tunings) {
+		Mps Speedometer(const MWCarTuning* mw, Rpm rpm, GearID gear, const Tunings *tunings) {
 			float speed = 0.0f;
 			float gear_ratio = mw->GEAR_RATIO[gear] * mw->FINAL_GEAR;
 			float power_range = mw->RED_LINE - mw->IDLE;
 			gear_ratio = UMath::Abs(gear_ratio);
 			if (gear_ratio > 0.0f && power_range > 0.0f) {
-				float wheelrear = WheelDiameter(engine, false) * 0.5f;
-				float wheelfront = WheelDiameter(engine, true) * 0.5f;
+				float wheelrear = WheelDiameter(mw, false) * 0.5f;
+				float wheelfront = WheelDiameter(mw, true) * 0.5f;
 				float avg_wheel_radius = (wheelrear + wheelfront) * 0.5f;
 				float clutch_rpm = (rpm - mw->IDLE) / gear_ratio / power_range * mw->RED_LINE;
 				speed = RPM2RPS(clutch_rpm) * avg_wheel_radius;
@@ -180,8 +180,7 @@ namespace Physics {
 		}
 
 		// Credits: Brawltendo
-		bool ShiftPoints(const MWCarTuning* mw, float *shift_up,
-										float *shift_down, unsigned int numpts) {
+		bool ShiftPoints(const MWCarTuning* mw, float *shift_up, float *shift_down, unsigned int numpts) {
 			for (int i = 0; i < numpts; ++i) {
 				shift_up[i] = 0.0f;
 				shift_down[i] = 0.0f;
@@ -296,7 +295,7 @@ namespace Physics {
 	}
 }
 
-class EngineRacer : public VehicleBehavior {
+class EngineRacer {
   public:
 	struct Clutch {
 	  public:
@@ -363,15 +362,11 @@ class EngineRacer : public VehicleBehavior {
 		bool mShiftingUp;
 	};
 
-	ISimable* GetOwner() const {
-		return Behavior::mIOwner;
-	}
-
 	IVehicle* GetVehicle() const {
-		return mVehicle;
+		return nullptr;
 	}
 
-	void Create(const BehaviorParams &bp);
+	void Create(Car* car);
 	GearID GuessGear(float speed) const;
 	float GuessRPM(float speed, GearID atgear) const;
 	ShiftPotential FindShiftPotential(GearID gear, float rpm, float rpmFromGround) const;
@@ -384,12 +379,6 @@ class EngineRacer : public VehicleBehavior {
 	void CalcShiftPoints();
 	bool DoGearChange(GearID gear, bool automatic);
 	void AutoShift(float dT);
-
-	void OnOwnerAttached(IAttachable* pOther) { ENGINERACER_FUNCTION_LOG("OnOwnerAttached"); }
-	void OnOwnerDetached(IAttachable* pOther) { ENGINERACER_FUNCTION_LOG("OnOwnerDetached"); }
-	void OnPause() { ENGINERACER_FUNCTION_LOG("OnPause");  }
-	void OnUnPause() { ENGINERACER_FUNCTION_LOG("OnUnPause");  }
-	int GetPriority() { ENGINERACER_FUNCTION_LOG("GetPriority"); return mPriority; }
 
 	Physics::Tunings* GetVehicleTunings() const {
 		return GetVehicleMWTunings(GetVehicle());
@@ -404,7 +393,6 @@ class EngineRacer : public VehicleBehavior {
 	// Behavior
 	void Reset();
 	void OnTaskSimulate(float dT);
-	void OnBehaviorChange(const UCrc32 &mechanic);
 
 	// ITransmission
 	float GetSpeedometer() const;
@@ -597,14 +585,7 @@ class EngineRacer : public VehicleBehavior {
 	}
 
 	float GetCatchupCheat() const {
-		if (fOpponentRubberband > 0.0 && GetVehicle()->GetDriverClass() != DRIVER_HUMAN) {
-			if (mCheater) mCheater->SetCatchupCheatOverride(fOpponentRubberband);
-			return fOpponentRubberband;
-		}
-
-		if (mCheater) {
-			return mCheater->GetCatchupCheat();
-		}
+		// todo
 		return 0.0;
 	}
 
@@ -627,11 +608,8 @@ class EngineRacer : public VehicleBehavior {
 	float mClutchRPMDiff;
 	bool mEngineBraking;
 	float mSportShifting;
-	IInput *mIInput;
-	IChassis *mSuspension;
-	ICheater *mCheater;
+	Car* pCar;
 	MWCarTuning* mMWInfo;
-	Attrib::Gen::vehicle mCarInfo;
 	float mRPM;
 	ShiftStatus mShiftStatus;
 	ShiftPotential mShiftPotential;
@@ -641,20 +619,8 @@ class EngineRacer : public VehicleBehavior {
 	Clutch mClutch;
 	bool mBlown;
 	float mSabotage;
-	eTransmissionOverride mTransmissionOverride;
 
-	IEngine tmpEngine;
-	ITransmission tmpTransmission;
-	IInductable tmpInductable;
-	ITiptronic tmpTiptronic;
-	IRaceEngine tmpRaceEngine;
-	IEngineDamage tmpEngineDamage;
-
-	IEngine* GetIEngine() { GET_FAKE_INTERFACE(EngineRacer, IEngine, tmpEngine) }
-	ITransmission* GetITransmission() { GET_FAKE_INTERFACE(EngineRacer, ITransmission, tmpTransmission) }
-	IInductable* GetIInductable() { GET_FAKE_INTERFACE(EngineRacer, IInductable, tmpInductable) }
-	ITiptronic* GetITiptronic() { GET_FAKE_INTERFACE(EngineRacer, ITiptronic, tmpTiptronic) }
-	IRaceEngine* GetIRaceEngine() { GET_FAKE_INTERFACE(EngineRacer, IRaceEngine, tmpRaceEngine) }
-	IEngineDamage* GetIEngineDamage() { GET_FAKE_INTERFACE(EngineRacer, IEngineDamage, tmpEngineDamage) }
+	IChassis* mSuspension;
+	IInput* mIInput;
 };
 EngineRacer* pEngine = nullptr;

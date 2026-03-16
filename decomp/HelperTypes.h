@@ -33,20 +33,20 @@ public:
 
 	void Init(int slots) {
 		if (pData && pData != SmallDataBuffer) {
-			gFastMem.Free(pData, 4*nSlots, "Average::pData");
+			delete[] pData;
 			pData = nullptr;
 		}
 		nSlots = slots;
 		pData = SmallDataBuffer;
 		if (slots > 5) {
-			pData = (float*)gFastMem.Alloc(4*slots, "Average::pData");
+			pData = new float[nSlots];
 		}
 		memset(pData, 0, 4 * slots);
 	}
 
 	void DeInit() {
 		if (pData && pData != SmallDataBuffer) {
-			gFastMem.Free(pData, 4*nSlots, "Average::pData");
+			delete[] pData;
 			pData = nullptr;
 		}
 	}
@@ -75,13 +75,13 @@ public:
 			  fTimeWindow(f_timewindow),
 			  iOldestValue(0),
 			  AllocSize(4 * nSlots) {
-		pTimeData = (float*)gFastMem.Alloc(AllocSize, "AverageWindow::TimeData");
+		pTimeData = new float[nSlots];
 		memset(pTimeData, 0, AllocSize);
 	}
 
 	void DeInit() {
 		if (pTimeData) {
-			gFastMem.Free(pTimeData, AllocSize, "AverageWindow::TimeData");
+			delete[] pTimeData;
 		}
 		Average::DeInit();
 	}
@@ -146,7 +146,7 @@ public:
 
 class Graph {
 public:
-	Graph(bVector2 *points, int num_points) {
+	Graph(UMath::Vector2 *points, int num_points) {
 		Points = points;
 		NumPoints = num_points;
 	}
@@ -168,7 +168,7 @@ public:
 	}
 
 private:
-	bVector2 *Points;
+	UMath::Vector2 *Points;
 	int NumPoints;
 };
 
@@ -221,21 +221,178 @@ template <> void tGraph<float>::Blend(float *dest, float *a, float *b, const flo
 	*dest = *a * blend_a + *b * (1.0f - blend_a);
 }
 
-// Credits: Brawltendo
-float Table::GetValue(float input) {
-	const int entries = NumEntries;
-	const float normarg = IndexMultiplier * (input - MinArg);
-	const int index = (int)normarg;
+class TableBase {
+public:
+	int NumEntries;
+	float MinArg;
+	float MaxArg;
+	float IndexMultiplier;
 
-	if (index < 0 || normarg < 0.0f)
-		return pTable[0];
-	if (index >= (entries - 1))
-		return pTable[entries - 1];
+	TableBase() {}
 
-	float ind = index;
-	if (ind > normarg)
-		ind -= 1.0f;
+	TableBase(int num, float min, float max) {
+		NumEntries = num;
+		MinArg = min;
+		MaxArg = max;
+		IndexMultiplier = (NumEntries - 1) / (MaxArg - MinArg);
+	}
+};
 
-	float delta = normarg - ind;
-	return (1.0f - delta) * pTable[index] + delta * pTable[index + 1];
+class Table : public TableBase {
+public:
+	const float* pTable;
+
+	Table(const float *table, int num, float min, float max) : TableBase(num, min, max), pTable(table) {}
+
+	Table(const float* table, int numEntries, float minArg, float maxArg, float indexMultiplier) {
+		pTable = table;
+		NumEntries = numEntries;
+		MinArg = minArg;
+		MaxArg = maxArg;
+		IndexMultiplier = indexMultiplier;
+	}
+
+	// Credits: Brawltendo
+	float GetValue(float input) {
+		const int entries = NumEntries;
+		const float normarg = IndexMultiplier * (input - MinArg);
+		const int index = (int)normarg;
+
+		if (index < 0 || normarg < 0.0f)
+			return pTable[0];
+		if (index >= (entries - 1))
+			return pTable[entries - 1];
+
+		float ind = index;
+		if (ind > normarg)
+			ind -= 1.0f;
+
+		float delta = normarg - ind;
+		return (1.0f - delta) * pTable[index] + delta * pTable[index + 1];
+	}
+};
+
+class AxlePair {
+public:
+	float Front;
+	float Rear;
+
+	float At(int index) const {
+		return (&Front)[index];
+	}
+};
+
+namespace Physics {
+	class Tunings {
+	public:
+		enum Path {
+			STEERING = 0,
+			HANDLING = 1,
+			BRAKES = 2,
+			RIDEHEIGHT = 3,
+			AERODYNAMICS = 4,
+			NOS = 5,
+			INDUCTION = 6,
+			MAX_TUNINGS = 7,
+		};
+
+		float Value[MAX_TUNINGS];
+	};
+}
+
+class WCollisionTri {
+public:
+	UMath::Vector3 fPt0;
+	UMath::Vector3 fPt1;
+	unsigned int fFlags;
+	UMath::Vector3 fPt2;
+};
+
+class WWorldPos {
+public:
+	WCollisionTri fFace;
+	float fYOffset;
+	int fSurface;
+	bool fFaceValid;
+
+	WWorldPos() {
+		memset(this,0,sizeof(*this));
+		fYOffset = 0.025;
+	}
+
+	void SetTolerance(float liftAmount) {
+		fYOffset = liftAmount;
+	}
+
+	bool Update(UMath::Vector3* pos, UMath::Vector4* dest, bool usecache, bool keep_valid) {
+		return false; // todo
+	}
+};
+
+enum SteeringType {
+	kGamePad = 0,
+	kWheelSpeedSensitive = 1,
+	kWheelSpeedInsensitive = 2,
+};
+
+enum GearID {
+	G_REVERSE = 0,
+	G_NEUTRAL = 1,
+	G_FIRST = 2,
+	G_SECOND = 3,
+	G_THIRD = 4,
+	G_FOURTH = 5,
+	G_FIFTH = 6,
+	G_SIXTH = 7,
+	G_SEVENTH = 8,
+	G_EIGHTH = 9,
+	G_MAX = 10,
+};
+
+enum ShiftStatus {
+	SHIFT_STATUS_NONE = 0,
+	SHIFT_STATUS_NORMAL = 1,
+	SHIFT_STATUS_GOOD = 2,
+	SHIFT_STATUS_PERFECT = 3,
+	SHIFT_STATUS_MISSED = 4,
+};
+
+enum ShiftPotential {
+	SHIFT_POTENTIAL_NONE = 0,
+	SHIFT_POTENTIAL_DOWN = 1,
+	SHIFT_POTENTIAL_UP = 2,
+	SHIFT_POTENTIAL_GOOD = 3,
+	SHIFT_POTENTIAL_PERFECT = 4,
+	SHIFT_POTENTIAL_MISS = 5,
+};
+
+enum DriverStyle {
+	STYLE_RACING = 0,
+	STYLE_DRAG = 1,
+};
+
+enum DriverClass {
+	DRIVER_HUMAN = 0,
+	DRIVER_TRAFFIC = 1,
+	DRIVER_COP = 2,
+	DRIVER_RACER = 3,
+	DRIVER_NONE = 4,
+	DRIVER_NIS = 5,
+	DRIVER_REMOTE = 6,
+};
+
+void ConvertWorldToLocal(Car* pCar, UMath::Vector3 &val, bool translate) {
+	UMath::Vector4 invorient;
+
+	if (translate) {
+		UMath::Sub(val, pCar->GetMatrix()->p, val);
+	}
+	UMath::Transpose(*pCar->GetQuaternion(), invorient);
+	UMath::Rotate(&val, &invorient, &val);
+}
+
+namespace Sim {
+	float GetTime() {
+		return pPlayerHost->nRaceTime / 1000.0;
+	}
 }

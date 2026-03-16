@@ -74,6 +74,14 @@ struct MWCarTuning {
 	// pvehicle
 	float TENSOR_SCALE[3];
 
+	// extra tires stuff for flatout
+	AxlePair ASPECT_RATIO = {40, 40};
+	AxlePair RIM_SIZE = {18, 19};
+	AxlePair SECTION_WIDTH = {245, 265};
+	AxlePair TRACK_WIDTH = {1.534, 1.544};
+	float WHEEL_BASE = 2.685;
+	float FRONT_AXLE = 1.39;
+
 	static void ReadDynamicArray(toml::table& config, std::vector<float>& out, const char* category, const char* name) {
 		out.clear();
 		for (int i = 0; i < 1024; i++) {
@@ -85,8 +93,6 @@ struct MWCarTuning {
 };
 std::vector<MWCarTuning> aCarTunings;
 MWCarTuning* LoadCarTuningFromFile(std::string configCarName) {
-	DLLDirSetter _setdir;
-
 	if (configCarName.ends_with(".conf")) {
 		for (int i = 0; i < 5; i++) {
 			configCarName.pop_back();
@@ -360,175 +366,10 @@ void GetLerpedCarTuning(MWCarTuning& tmp, const std::string& model, float brake,
 	while (tmp.GEAR_RATIO[tmp.GEAR_RATIO.size()-1] <= 0.35) { tmp.GEAR_RATIO.pop_back(); }
 }
 
-int GetPerformanceKitNum(const VehicleCustomizations* cust, CAR_SLOT_ID type) {
-	DBCarPart db{};
-	auto b = VehicleCustomizations::GetInstalledPart((VehicleCustomizations*)cust, type, cust->Type, &db);
-	if (!b) return -1;
-	return db.kitNum;
+void GetLerpedCarTuning(MWCarTuning& out, const std::string& model) {
+	return GetLerpedCarTuning(out, model, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0); // todo tunings
 }
 
-BluePrintType GetEventType() {
-	if (GRaceStatus::fObj && GRaceStatus::fObj->mRaceParms) {
-		auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
-		if (raceType >= GRace::kRaceType_Grip_Min && raceType < GRace::kRaceType_Grip_Max) return BLUEPRINT_GRIP;
-		if (raceType >= GRace::kRaceType_P2P_Min && raceType < GRace::kRaceType_P2P_Max) return BLUEPRINT_SPEED_CHALLENGE;
-		if (raceType >= GRace::kRaceType_Drag_Min && raceType < GRace::kRaceType_Drag_Max) return BLUEPRINT_DRAG;
-		if (raceType >= GRace::kRaceType_Drift_Min && raceType < GRace::kRaceType_Drift_Max) return BLUEPRINT_DRIFT;
-	}
-	return BLUEPRINT_GRIP;
-}
-
-int GetVehicleKitCount(const VehicleCustomizations* cust, CAR_SLOT_ID type) {
-	auto typeInfo = GetCarTypeInfoFromHash(cust->Type);
-	auto carHash = Attrib::StringToLowerCaseKey(typeInfo->CarTypeName);
-
-	auto car = Attrib::Gen::car(carHash);
-	auto car_parts = Attrib::Gen::car_parts(car.GetLayout()->parts.mCollectionKey);
-
-	switch (type) {
-		case CARSLOTID_DRIVETRAIN_PACKAGE: {
-			auto car_part = Attrib::Gen::car_part(car_parts.GetLayout()->drivetrain_package.parts.mArray[0].mCollectionKey);
-			return car_part.GetLayout()->kit_max;
-		};
-		case CARSLOTID_ENGINE_PACKAGE: {
-			auto car_part = Attrib::Gen::car_part(car_parts.GetLayout()->engine_package.parts.mArray[0].mCollectionKey);
-			return car_part.GetLayout()->kit_max;
-		};
-		case CARSLOTID_FORCED_INDUCTION_PACKAGE: {
-			auto car_part = Attrib::Gen::car_part(car_parts.GetLayout()->forced_induction_package.parts.mArray[0].mCollectionKey);
-			return car_part.GetLayout()->kit_max;
-		};
-		case CARSLOTID_NITROUS_PACKAGE: {
-			auto car_part = Attrib::Gen::car_part(car_parts.GetLayout()->nitrous_package.parts.mArray[0].mCollectionKey);
-			return car_part.GetLayout()->kit_max;
-		};
-		case CARSLOTID_SUSPENSION_PACKAGE: {
-			auto car_part = Attrib::Gen::car_part(car_parts.GetLayout()->suspension_package.parts.mArray[0].mCollectionKey);
-			return car_part.GetLayout()->kit_max;
-		};
-		case CARSLOTID_TIRE_PACKAGE: {
-			// todo is this wrong? it reports 12 but the max is 4
-			auto car_part = Attrib::Gen::car_part(car_parts.GetLayout()->tire_package.parts.mArray[0].mCollectionKey);
-			return std::min(car_part.GetLayout()->kit_max, 4);
-		};
-		default:
-			return 0;
-	}
-}
-
-float GetPerformanceKitModifier(const VehicleCustomizations* cust, CAR_SLOT_ID type) {
-	float kitNum = GetPerformanceKitNum(cust, type);
-	float kitCount = GetVehicleKitCount(cust, type);
-	WriteLog(std::format("type {} kitNum {} kitCount {}", (int)type, kitNum, kitCount));
-	if (type == CARSLOTID_NITROUS_PACKAGE) {
-		return kitNum / kitCount;
-	}
-	else {
-		return (kitNum + 1.0) / (kitCount + 1.0);
-	}
-}
-
-// this is insanely stupid but PVehicles don't have the full VehicleCustomizations, so things like PhysicsTuning aren't in there
-VehicleCustomizations* GetCustomizationWithTheseParts(uint32_t carType, const int16_t* parts) {
-	if (SkipFE) return nullptr;
-
-	auto cars = &UserProfile::spUserProfiles[0]->mCarStable;
-
-	std::vector<VehicleCustomizations*> customizations;
-	for (auto& car : cars->CarTable) {
-		if (car.Handle == 0xFFFFFFFF) continue;
-
-		auto cust = FEPlayerCarDB::GetCustomizationRecordByHandle(cars, car.Customization);
-		if (!cust) continue;
-
-		if (cust->Type != carType) continue;
-
-		if (cust->mBlueprintUsed[0]) customizations.push_back(&cust->mBluePrint[0]);
-		if (cust->mBlueprintUsed[1]) customizations.push_back(&cust->mBluePrint[1]);
-		if (cust->mBlueprintUsed[2]) customizations.push_back(&cust->mBluePrint[2]);
-	}
-
-	for (auto& target : customizations) {
-		if (target->bluePrintType != GetEventType()) continue;
-
-		if (parts[CARSLOTID_TIRE_PACKAGE] != target->InstalledParts[CARSLOTID_TIRE_PACKAGE]) continue;
-		if (parts[CARSLOTID_DRIVETRAIN_PACKAGE] != target->InstalledParts[CARSLOTID_DRIVETRAIN_PACKAGE]) continue;
-		if (parts[CARSLOTID_DRIVETRAIN_PACKAGE] != target->InstalledParts[CARSLOTID_DRIVETRAIN_PACKAGE]) continue;
-		if (parts[CARSLOTID_FORCED_INDUCTION_PACKAGE] != target->InstalledParts[CARSLOTID_FORCED_INDUCTION_PACKAGE]) continue;
-		if (parts[CARSLOTID_NITROUS_PACKAGE] != target->InstalledParts[CARSLOTID_NITROUS_PACKAGE]) continue;
-		if (parts[CARSLOTID_SUSPENSION_PACKAGE] != target->InstalledParts[CARSLOTID_SUSPENSION_PACKAGE]) continue;
-
-		return target;
-	}
+Physics::Tunings* GetVehicleMWTunings(void* veh) {
 	return nullptr;
-}
-
-float GetPhysicsTuningValue(float in, float max) {
-	return (in * max) + 1.0;
-}
-
-void GetLerpedCarTuning(MWCarTuning& out, const std::string& carName, const VehicleCustomizations* cust) {
-	auto pvehicle = Attrib::Gen::pvehicle(Attrib::StringHash32(carName.c_str()));
-	auto model = (std::string)GetCarTypeInfoFromHash(bStringHash(pvehicle.GetLayout()->MODEL.mString))->CarTypeName;
-	std::transform(model.begin(), model.end(), model.begin(), [](unsigned char c){ return std::tolower(c); });
-	if (cust) {
-		float brake = GetPerformanceKitModifier(cust, CARSLOTID_TIRE_PACKAGE); // todo are brake upgrades not a thing here?
-		float drivetrain = GetPerformanceKitModifier(cust, CARSLOTID_DRIVETRAIN_PACKAGE);
-		float engine = GetPerformanceKitModifier(cust, CARSLOTID_ENGINE_PACKAGE);
-		float induction = GetPerformanceKitModifier(cust, CARSLOTID_FORCED_INDUCTION_PACKAGE);
-		float nitro = GetPerformanceKitModifier(cust, CARSLOTID_NITROUS_PACKAGE);
-		float suspension = GetPerformanceKitModifier(cust, CARSLOTID_SUSPENSION_PACKAGE);
-		float tire = GetPerformanceKitModifier(cust, CARSLOTID_TIRE_PACKAGE);
-		GetLerpedCarTuning(out, model, brake, drivetrain, engine, induction, nitro, suspension, tire);
-
-		if (auto real = GetCustomizationWithTheseParts(cust->Type, cust->InstalledParts)) {
-			// physics_tuning data:
-			// physics_tuning_slider 0,0 means -value, 0,1 means value
-
-			// transmission tunings
-			if (out.GEAR_RATIO.size() > G_FIRST) out.GEAR_RATIO[G_FIRST] *= (GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::GEAR_RATIO_1], -0.1));
-			if (out.GEAR_RATIO.size() > G_SECOND) out.GEAR_RATIO[G_SECOND] *= (GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::GEAR_RATIO_2], -0.1));
-			if (out.GEAR_RATIO.size() > G_THIRD) out.GEAR_RATIO[G_THIRD] *= (GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::GEAR_RATIO_3], -0.1));
-			if (out.GEAR_RATIO.size() > G_FOURTH) out.GEAR_RATIO[G_FOURTH] *= (GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::GEAR_RATIO_4], -0.1));
-			if (out.GEAR_RATIO.size() > G_FIFTH) out.GEAR_RATIO[G_FIFTH] *= (GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::GEAR_RATIO_5], -0.1));
-			if (out.GEAR_RATIO.size() > G_SIXTH) out.GEAR_RATIO[G_SIXTH] *= (GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::GEAR_RATIO_6], -0.1));
-			out.FINAL_GEAR *= GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::GEAR_RATIO_FINAL], -0.1);
-
-			// suspension tunings
-			out.SWAYBAR_STIFFNESS.Front *= GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::FRONT_ROLL_BAR_STIFFNESS], -0.1);
-			out.SWAYBAR_STIFFNESS.Rear *= GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::REAR_ROLL_BAR_STIFFNESS], -0.1);
-			out.SHOCK_STIFFNESS.Front *= GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::FRONT_SHOCK_COMPRESSION_RATE], 0.15);
-			out.SHOCK_STIFFNESS.Rear *= GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::REAR_SHOCK_COMPRESSION_RATE], 0.15);
-			out.SHOCK_EXT_STIFFNESS.Front *= GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::FRONT_SHOCK_REBOUND_RATE], 0.15);
-			out.SHOCK_EXT_STIFFNESS.Rear *= GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::REAR_SHOCK_REBOUND_RATE], 0.15);
-			out.SPRING_STIFFNESS.Front *= GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::FRONT_SPRING_RATE], 0.3);
-			out.SPRING_STIFFNESS.Rear *= GetPhysicsTuningValue(real->PhysicsTuning[VehicleCustomizations::REAR_SPRING_RATE], 0.3);
-		}
-		else {
-			WriteLog(std::format("Failed to find FECarRecord for customized {}", model));
-		}
-	}
-	else {
-		return GetLerpedCarTuning(out, model, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
-	}
-}
-
-Physics::Tunings* GetVehicleMWTunings(IVehicle* veh) {
-	auto cust = veh->GetCustomizations();
-	if (!cust) return nullptr;
-
-	auto real = GetCustomizationWithTheseParts(cust->Type, cust->InstalledParts);
-	if (!real) return nullptr;
-
-	static Physics::Tunings tmp;
-	memset(&tmp, 0, sizeof(tmp));
-	tmp.Value[Physics::Tunings::STEERING] = real->PhysicsTuning[VehicleCustomizations::STEERING_RESPONSE_RATIO];
-	//tmp.Value[Physics::Tunings::HANDLING] = (real->PhysicsTuning[VehicleCustomizations::FRONT_TIRE_PRESSURE] + real->PhysicsTuning[VehicleCustomizations::FRONT_TIRE_PRESSURE]) / 2.0;
-	tmp.Value[Physics::Tunings::BRAKES] = real->PhysicsTuning[VehicleCustomizations::BRAKE_BIAS] * -1.0;
-	tmp.Value[Physics::Tunings::RIDEHEIGHT] = real->PhysicsTuning[VehicleCustomizations::RIDE_HEIGHT];
-	tmp.Value[Physics::Tunings::AERODYNAMICS] = real->PhysicsTuning[VehicleCustomizations::DRAG_VS_DOWNFORCE];
-	float nos = real->PhysicsTuning[VehicleCustomizations::NITROUS_JETTING_FLOW_RATE] - real->PhysicsTuning[VehicleCustomizations::NITROUS_PRESSURE];
-	tmp.Value[Physics::Tunings::NOS] = UMath::Clamp(nos, -1.0, 1.0);
-	//tmp.Value[Physics::Tunings::INDUCTION] = real->PhysicsTuning[VehicleCustomizations::];
-	return &tmp;
 }

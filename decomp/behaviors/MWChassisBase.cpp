@@ -1,58 +1,26 @@
-void* NewChassisVTable[] = {
-		(void*)&ChassisMW::OnService,
-		(void*)&ChassisMW::Destroy,
-		(void*)0xDEADBEEF, // purecall
-		(void*)&ChassisMW::GetPriority,
-		(void*)&ChassisMW::OnOwnerAttached,
-		(void*)&ChassisMW::OnOwnerDetached,
-		(void*)&ChassisMW::OnTaskSimulate,
-		(void*)&ChassisMW::OnBehaviorChange,
-		(void*)&ChassisMW::OnPause,
-		(void*)&ChassisMW::OnUnPause,
-		(void*)&ChassisMW::OnDebugDraw,
-		(void*)0xDEADBEEF, // purecall
-};
-
 void ChassisMW::Destroy(char a2) {
 	CHASSIS_FUNCTION_LOG("Destroy");
 
-	GetIChassis()->mCOMObject->Remove(GetIChassis());
-
 	delete mMWAttributes;
-
-	mAttributes.dtor();
 
 	//dtor_simobject(this); // todo frees the interface list
 
 	WriteLog("SuspensionRacer::Destroy finished");
 }
 
-void ChassisMW::Create(const BehaviorParams &bp) {
+void ChassisMW::Create(Car* car) {
 	CHASSIS_FUNCTION_LOG("Create");
 
 	mChassisType = "Chassis";
-
-	*(uintptr_t*)this = (uintptr_t)&NewChassisVTable;
-	*(uintptr_t*)&tmpChassis = (uintptr_t)&MWIChassis::NewVTable;
-	tmpChassis.mCOMObject = &bp.fowner->Object;
-	bp.fowner->Object.Add(&tmpChassis);
 
 	mJumpTime = 0.0f;
 	mJumpAlititude = 0.0f;
 	mTireHeat = 0.0f;
 
-	ctor_cartuning(&mAttributes, cartuning_LookupKey(GetOwner()));
+	pCar = car;
 
 	mMWAttributes = new MWCarTuning;
-	GetLerpedCarTuning(*mMWAttributes, GetVehicle()->GetVehicleName(), GetVehicle()->GetCustomizations());
-
-	GetOwner()->QueryInterface(&mRBComplex);
-	GetOwner()->QueryInterface(&mRB);
-	GetOwner()->QueryInterface(&mInput);
-	GetOwner()->QueryInterface(&mEngine);
-	GetOwner()->QueryInterface(&mTransmission);
-	GetOwner()->QueryInterface(&mEngineDamage);
-	GetOwner()->QueryInterface(&mSpikeDamage);
+	GetLerpedCarTuning(*mMWAttributes, GetVehicle()->GetVehicleName());
 }
 
 Meters ChassisMW::GuessCompression(unsigned int id, Newtons downforce) {
@@ -113,7 +81,7 @@ void ChassisMW::DoTireHeat(const ChassisMW::State &state) {
 float ChassisMW::CalculateOversteerFactor() {
 	float speed = mRB->GetSpeed();
 	float magnitude = 0.0f;
-	if ((this->GetVehicle()->GetSpeed() > 0.0f) && (speed > 1.0f)) {
+	if ((GetVehicle()->GetSpeed() > 0.0f) && (speed > 1.0f)) {
 		magnitude = UMath::Abs((GetIChassis()->GetWheelSkid(3) + GetIChassis()->GetWheelSkid(2)) * 0.5f) / speed;
 	}
 	return UMath::Min(magnitude, 1.0f);
@@ -206,26 +174,11 @@ ChassisMW::SleepState ChassisMW::DoSleep(const ChassisMW::State &state) {
 	return SS_NONE;
 }
 
-void ChassisMW::OnBehaviorChange(const UCrc32 &mechanic) {
-	if (mechanic.mCRC == BEHAVIOR_MECHANIC_ENGINE.mHash32) {
-		GetOwner()->QueryInterface(&mTransmission);
-		GetOwner()->QueryInterface(&mEngine);
-		GetOwner()->QueryInterface(&mEngineDamage);
-	} else if (mechanic.mCRC == BEHAVIOR_MECHANIC_INPUT.mHash32 || mechanic.mCRC == BEHAVIOR_MECHANIC_AI.mHash32) {
-		GetOwner()->QueryInterface(&mInput);
-	} else if (mechanic.mCRC == BEHAVIOR_MECHANIC_RIGIDBODY.mHash32) {
-		GetOwner()->QueryInterface(&mRBComplex);
-		GetOwner()->QueryInterface(&mRB);
-	} else if (mechanic.mCRC == BEHAVIOR_MECHANIC_DAMAGE.mHash32) {
-		GetOwner()->QueryInterface(&mSpikeDamage);
-	}
-}
-
 // Credits: Brawltendo
 void ChassisMW::ComputeAckerman(const float steering, const ChassisMW::State &state, UMath::Vector4 *left, UMath::Vector4 *right) {
 	int going_right = true;
-	float wheelbase = mAttributes.GetLayout()->WHEEL_BASE;
-	float wheeltrack = mAttributes.GetLayout()->TRACK_WIDTH.Front;
+	float wheelbase = mMWAttributes->WHEEL_BASE;
+	float wheeltrack = mMWAttributes->TRACK_WIDTH.Front;
 	float steer_inside = ANGLE2RAD(steering);
 
 	// clamp steering angle <= 180 degrees
@@ -273,8 +226,8 @@ void ChassisMW::ComputeAckerman(const float steering, const ChassisMW::State &st
 }
 
 void ChassisMW::SetCOG(float extra_bias, float extra_ride) {
-	float front_z = mAttributes.GetLayout()->FRONT_AXLE;
-	float rear_z = front_z - mAttributes.GetLayout()->WHEEL_BASE;
+	float front_z = mMWAttributes->FRONT_AXLE;
+	float rear_z = front_z - mMWAttributes->WHEEL_BASE;
 	
 	UMath::Vector3 dim;
 	mRB->GetDimension(&dim);
@@ -293,7 +246,6 @@ void ChassisMW::SetCOG(float extra_bias, float extra_ride) {
 void ChassisMW::ComputeState(float dT, ChassisMW::State &state) {
 	state.time = dT;
 	state.flags = 0;
-	state.collider = mRB->GetWCollider();
 	state.inertia = *mRBComplex->GetInertiaTensor();
 	mRB->GetDimension(&state.dimension);
 
@@ -354,14 +306,14 @@ void ChassisMW::ComputeState(float dT, ChassisMW::State &state) {
 	UMath::Rotate(state.cog, state.matrix, state.world_cog);
 
 	state.blown_tires = 0;
-	if (mSpikeDamage) {
-		unsigned int num_wheels = GetIChassis()->GetNumWheels();
-		for (unsigned int i = 0; i < num_wheels; ++i) {
-			if (mSpikeDamage->GetTireDamage(i) == TIRE_DAMAGE_BLOWN) {
-				state.blown_tires |= (1 << i);
-			}
-		}
-	}
+	//if (mSpikeDamage) {
+	//	unsigned int num_wheels = GetIChassis()->GetNumWheels();
+	//	for (unsigned int i = 0; i < num_wheels; ++i) {
+	//		if (mSpikeDamage->GetTireDamage(i) == TIRE_DAMAGE_BLOWN) {
+	//			state.blown_tires |= (1 << i);
+	//		}
+	//	}
+	//}
 
 	if (GetVehicle()->IsDestroyed()) {
 		state.flags |= State::IS_DESTROYED;
@@ -447,7 +399,7 @@ void ChassisMW::DoAerodynamics(const ChassisMW::State &state, float drag_pct, fl
 }
 
 static const int bJumpStabilizer = 1;
-bVector2 JumpStabilizationGraph[] = {bVector2(0.0f, 0.0f), bVector2(0.4f, 0.15f), bVector2(2.0f, 5.0f)};
+UMath::Vector2 JumpStabilizationGraph[] = {UMath::Vector2(0.0f, 0.0f), UMath::Vector2(0.4f, 0.15f), UMath::Vector2(2.0f, 5.0f)};
 Graph JumpStabilization(JumpStabilizationGraph, 3);
 static const int bActiveStabilizer = 1;
 static const float fPitchStabilizerAction = 40.0f;

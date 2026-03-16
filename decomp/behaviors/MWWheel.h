@@ -12,7 +12,7 @@ public:
 	int pad;
 	UMath::Vector3 mVelocity;
 	int pad2;
-	Attrib::Instance mSurface;
+	int mSurface;
 	float mSurfaceStick;
 	UMath::Vector4 mIntegral;
 
@@ -47,15 +47,14 @@ public:
 		mForce.y = 0.0;
 		mForce.z = 0.0;
 		mWorldPos = WWorldPos();
-		mSurface.dtor();
-		memset(&mSurface,0,sizeof(mSurface));
+		mSurface = 0;
 	}
 
-	void UpdateSurface(const Attrib::Collection* surface);
-	bool InitPosition(ICollisionBody* cb, IRigidBody *rb, double maxcompression);
+	void UpdateSurface(int surface);
+	bool InitPosition(Car* car, double maxcompression);
 	bool UpdatePosition(const UMath::Vector3 &body_av, const UMath::Vector3 &body_lv,
 							   const UMath::Matrix4 &body_matrix, const UMath::Vector3 &cog,
-							   float dT, float wheel_radius, bool usecache, const WCollider *collider, float vehicle_height);
+							   float dT, float wheel_radius, bool usecache, float vehicle_height);
 
 	const UMath::Vector4 &GetNormal() const {
 		return mNormal;
@@ -113,8 +112,8 @@ public:
 		mCompression = UMath::Max(c, 0.0f);
 	}
 
-	const SimSurface *GetSurface() const {
-		return (SimSurface*)&mSurface;
+	int GetSurface() const {
+		return mSurface;
 	}
 
 	const UMath::Vector3 &GetVelocity() const {

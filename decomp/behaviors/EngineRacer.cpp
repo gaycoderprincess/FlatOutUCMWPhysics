@@ -1,49 +1,7 @@
-void* NewEngineRacerVTable[] = {
-		(void*)0x579670, // generic OnService
-		(void*)&EngineRacer::dtor,
-		(void*)&EngineRacer::Reset,
-		(void*)&EngineRacer::GetPriority,
-		(void*)&EngineRacer::OnOwnerAttached,
-		(void*)&EngineRacer::OnOwnerDetached,
-		(void*)&EngineRacer::OnTaskSimulate,
-		(void*)&EngineRacer::OnBehaviorChange,
-		(void*)&EngineRacer::OnPause,
-		(void*)&EngineRacer::OnUnPause,
-		(void*)&EngineRacer::IsEngineBraking,
-		(void*)&EngineRacer::IsShiftingGear,
-		(void*)&EngineRacer::OnGearChange,
-		(void*)&EngineRacer::UseRevLimiter,
-		(void*)&EngineRacer::DoECU,
-		(void*)&EngineRacer::DoThrottle,
-		(void*)&EngineRacer::DoNos,
-		(void*)&EngineRacer::DoShifting,
-		(void*)&EngineRacer::UpdateShiftPotential,
-		(void*)&EngineRacer::GetEngineTorque,
-};
-
-void EngineRacer::Create(const BehaviorParams &bp) {
+void EngineRacer::Create(Car* car) {
 	ENGINERACER_FUNCTION_LOG("Create");
 
-	*(uintptr_t*)this = (uintptr_t)&NewEngineRacerVTable;
-	*(uintptr_t*)&tmpEngine = (uintptr_t)&MWIEngine::NewVTable;
-	*(uintptr_t*)&tmpTransmission = (uintptr_t)&MWITransmission::NewVTable;
-	*(uintptr_t*)&tmpInductable = (uintptr_t)&MWIInductable::NewVTable;
-	*(uintptr_t*)&tmpTiptronic = (uintptr_t)&MWITiptronic::NewVTable;
-	*(uintptr_t*)&tmpRaceEngine = (uintptr_t)&MWIRaceEngine::NewVTable;
-	*(uintptr_t*)&tmpEngineDamage = (uintptr_t)&MWIEngineDamage::NewVTable;
-
-	tmpEngine.mCOMObject = &bp.fowner->Object;
-	tmpTransmission.mCOMObject = &bp.fowner->Object;
-	tmpInductable.mCOMObject = &bp.fowner->Object;
-	tmpTiptronic.mCOMObject = &bp.fowner->Object;
-	tmpRaceEngine.mCOMObject = &bp.fowner->Object;
-	tmpEngineDamage.mCOMObject = &bp.fowner->Object;
-	bp.fowner->Object.Add(&tmpEngine);
-	bp.fowner->Object.Add(&tmpTransmission);
-	bp.fowner->Object.Add(&tmpInductable);
-	bp.fowner->Object.Add(&tmpTiptronic);
-	bp.fowner->Object.Add(&tmpRaceEngine);
-	bp.fowner->Object.Add(&tmpEngineDamage);
+	pCar = car;
 
 	mDriveTorque = 0.0f;
 	mDriveTorqueAtEngine = 0.0f;
@@ -62,15 +20,9 @@ void EngineRacer::Create(const BehaviorParams &bp) {
 	mClutchRPMDiff = 0.0f;
 	mEngineBraking = false;
 	mSportShifting = 0.0f;
-	mIInput = nullptr;
-	mSuspension = nullptr;
-
-	ctor_cartuning(&mCarInfo, cartuning_LookupKey(GetOwner()));
-	//ctor_cartuning(&mCarInfo, GetOwner()->GetAttributes()->mCollection->mKey);
-	//mCarInfo.mCollection = GetOwner()->GetAttributes()->mCollection;
 
 	mMWInfo = new MWCarTuning;
-	GetLerpedCarTuning(*mMWInfo, GetVehicle()->GetVehicleName(), GetVehicle()->GetDriverClass() == DRIVER_HUMAN ? GetVehicle()->GetCustomizations() : nullptr);
+	GetLerpedCarTuning(*mMWInfo, GetVehicle()->GetVehicleName());
 
 	mRPM = 0.0f;
 	mShiftStatus = SHIFT_STATUS_NONE;
@@ -81,10 +33,6 @@ void EngineRacer::Create(const BehaviorParams &bp) {
 	mBlown = false;
 	mSabotage = 0.0f;
 
-	GetOwner()->QueryInterface(&mIInput);
-	GetOwner()->QueryInterface(&mSuspension);
-	GetOwner()->QueryInterface(&mCheater);
-
 	if (mMWInfo->NOS_CAPACITY > 0.0f) {
 		mNOSCapacity = 1.0f;
 	} else {
@@ -93,38 +41,19 @@ void EngineRacer::Create(const BehaviorParams &bp) {
 
 	Reset();
 
-	// i dont think this does anything but its worth a try
-	if (bAffectOpponents) {
-		mCarInfo.GetLayout()->BRAKES.Front = mMWInfo->BRAKES.Front;
-		mCarInfo.GetLayout()->BRAKES.Rear = mMWInfo->BRAKES.Rear;
-		mCarInfo.GetLayout()->EBRAKE = mMWInfo->EBRAKE;
-	}
-
 	WriteLog("EngineRacer::Create finished");
 }
 
 void EngineRacer::dtor(char a2) {
 	ENGINERACER_FUNCTION_LOG("dtor");
 
-	GetIEngine()->mCOMObject->Remove(GetIEngine());
-	GetITransmission()->mCOMObject->Remove(GetITransmission());
-	GetIInductable()->mCOMObject->Remove(GetIInductable());
-	GetITiptronic()->mCOMObject->Remove(GetITiptronic());
-	GetIRaceEngine()->mCOMObject->Remove(GetIRaceEngine());
-	GetIEngineDamage()->mCOMObject->Remove(GetIEngineDamage());
-
-	//IAttributeable::UnRegister(this); // todo
-
 	delete mMWInfo;
 
-	mCarInfo.dtor();
-
-	//dtor_simobject(this); // todo frees the interface list
-
-	if ((a2 & 1) != 0) {
-		WriteLog("gFastMem.Free");
-		gFastMem.Free(this, sizeof(EngineRacer), nullptr);
-	}
+	// todo
+	//if ((a2 & 1) != 0) {
+	//	WriteLog("gFastMem.Free");
+	//	gFastMem.Free(this, sizeof(EngineRacer), nullptr);
+	//}
 
 	WriteLog("EngineRacer::dtor finished");
 }
@@ -132,17 +61,6 @@ void EngineRacer::dtor(char a2) {
 float EngineRacer::GetHorsePower() const {
 	float engine_torque = GetEngineTorque(mRPM);
 	return NM2HP(engine_torque * mThrottle, mRPM);
-}
-
-void EngineRacer::OnBehaviorChange(const UCrc32 &mechanic) {
-	ENGINERACER_FUNCTION_LOG("OnBehaviorChange");
-	if (mechanic.mCRC == BEHAVIOR_MECHANIC_AI.mHash32 || mechanic.mCRC == BEHAVIOR_MECHANIC_INPUT.mHash32) {
-		GetOwner()->QueryInterface(&mIInput);
-		GetOwner()->QueryInterface(&mCheater);
-	}
-	if (mechanic.mCRC == BEHAVIOR_MECHANIC_SUSPENSION.mHash32) {
-		GetOwner()->QueryInterface(&mSuspension);
-	}
 }
 
 void EngineRacer::Sabotage(float time) {
@@ -155,8 +73,6 @@ bool EngineRacer::Blow() {
 	if (!mBlown) {
 		mBlown = true;
 		mSabotage = 0.0f;
-		// todo
-		//new EEngineBlown(GetOwner()->GetInstanceHandle());
 		return true;
 	}
 	return false;
@@ -164,9 +80,6 @@ bool EngineRacer::Blow() {
 
 void EngineRacer::Reset() {
 	ENGINERACER_FUNCTION_LOG("Reset");
-
-	// redo tunings in the case of gamemode change
-	GetLerpedCarTuning(*mMWInfo, GetVehicle()->GetVehicleName(), GetVehicle()->GetDriverClass() == DRIVER_HUMAN ? GetVehicle()->GetCustomizations() : nullptr);
 
 	mDriveTorque = 0.0f;
 	mDriveTorqueAtEngine = 0.0f;
@@ -187,7 +100,6 @@ void EngineRacer::Reset() {
 	mThrottle = 0.0f;
 	mNOSBoost = 1.0f;
 	mSportShifting = 0.0f;
-	mTransmissionOverride = OVERRIDE_NONE;
 
 	CalcShiftPoints();
 }
@@ -226,8 +138,8 @@ GearID EngineRacer::GuessGear(float speed) const {
 }
 
 float EngineRacer::GuessRPM(float speed, GearID atgear) const {
-	float wheelrear = Physics::Info::WheelDiameter(mCarInfo, false) * 0.5f;
-	float wheelfront = Physics::Info::WheelDiameter(mCarInfo, true) * 0.5f;
+	float wheelrear = Physics::Info::WheelDiameter(mMWInfo, false) * 0.5f;
+	float wheelfront = Physics::Info::WheelDiameter(mMWInfo, true) * 0.5f;
 	float avg_wheel_radius = (wheelrear + wheelfront) * 0.5f;
 
 	if (avg_wheel_radius <= 0.0f) {
@@ -423,13 +335,6 @@ bool EngineRacer::DoGearChange(GearID gear, bool automatic) {
 	if (status != SHIFT_STATUS_NONE) {
 		mShiftStatus = status;
 		mShiftPotential = SHIFT_POTENTIAL_NONE;
-		ISimable *owner = GetOwner();
-
-		// todo
-		if (owner->IsPlayer()) {
-			// dispatch shift event
-			//new EPlayerShift(owner->GetInstanceHandle(), status, automatic, previous, gear);
-		}
 		return true;
 	}
 
@@ -517,7 +422,7 @@ void EngineRacer::SetDifferentialAngularVelocity(float w) {
 // Credits: Brawltendo
 float EngineRacer::CalcSpeedometer(float rpm, unsigned int gear) const {
 	const Physics::Tunings *tunings = GetVehicleTunings();
-	return Physics::Info::Speedometer(mMWInfo, mCarInfo, rpm, (GearID)gear, tunings);
+	return Physics::Info::Speedometer(mMWInfo, rpm, (GearID)gear, tunings);
 }
 
 // Credits: Brawltendo
@@ -619,16 +524,17 @@ float EngineRacer::DoNos(const Physics::Tunings *tunings, float dT, bool engaged
 
 	float speed_mph = MPS2MPH(GetVehicle()->GetAbsoluteSpeed());
 	float recharge_rate = 0.0f;
-	IPlayer *player = GetOwner()->GetPlayer();
 
-	if (!player || player->CanRechargeNOS()) {
+	// todo?
+	//IPlayer *player = GetOwner()->GetPlayer();
+	//if (!player || player->CanRechargeNOS()) {
 		float min_speed = mMWInfo->RECHARGE_MIN_SPEED;
 		float max_speed = mMWInfo->RECHARGE_MAX_SPEED;
 		if (speed_mph >= min_speed && mGear >= G_FIRST) {
 			float t = UMath::Ramp(speed_mph, min_speed, max_speed);
 			recharge_rate = UMath::Lerp(mMWInfo->RECHARGE_MIN, mMWInfo->RECHARGE_MAX, t);
 		}
-	}
+	//}
 
 	if (mGear < G_FIRST || mThrottle <= 0.0f || this->IsBlown())
 		engaged = false;
@@ -731,11 +637,7 @@ float EngineRacer::DoThrottle(float dT) {
 
 // Credits: Brawltendo
 void EngineRacer::DoShifting(float dT) {
-	auto automatic = mIInput && mIInput->IsAutomaticShift();
-	if (mTransmissionOverride != OVERRIDE_NONE) {
-		automatic = mTransmissionOverride == OVERRIDE_AUTOMATIC;
-	}
-	if (automatic) {
+	if (mIInput && mIInput->IsAutomaticShift()) {
 		AutoShift(dT);
 	}
 
@@ -785,8 +687,6 @@ void EngineRacer::OnTaskSimulate(float dT) {
 	if (mSuspension->GetNumWheels() != 4) {
 		return;
 	}
-
-	UpdatePerfectLaunchText();
 
 	const Physics::Tunings *tunings = GetVehicleTunings();
 	bool is_staging = GetVehicle()->IsStaging();
