@@ -626,4 +626,5 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 
 	IChassis* mSuspension;
 	IInput* mIInput;
+	int nLastRaceState;
 };

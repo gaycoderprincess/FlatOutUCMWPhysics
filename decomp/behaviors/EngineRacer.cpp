@@ -698,6 +698,11 @@ void EngineRacer::OnTaskSimulate(float dT) {
 		return;
 	}
 
+	if (nLastRaceState > pGameFlow->nRaceState) {
+		Reset();
+	}
+	nLastRaceState = pGameFlow->nRaceState;
+
 	if (mSuspension->GetNumWheels() != 4) {
 		return;
 	}

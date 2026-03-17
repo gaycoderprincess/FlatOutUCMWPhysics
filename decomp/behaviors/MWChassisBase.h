@@ -86,6 +86,8 @@ public:
 	IEngine* mEngine;
 	ITransmission* mTransmission;
 
+	int nLastRaceState;
+
 	IVehicle* GetVehicle() {
 		return GetPlayerInterface(pCar)->Find<IVehicle>();
 	}

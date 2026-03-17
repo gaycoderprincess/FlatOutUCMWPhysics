@@ -455,6 +455,11 @@ void SuspensionRacerMW::OnTaskSimulate(float dT) {
 		return;
 	}
 
+	if (nLastRaceState > pGameFlow->nRaceState) {
+		Reset();
+	}
+	nLastRaceState = pGameFlow->nRaceState;
+
 	float ride_extra = 0.0f;
 	const Physics::Tunings *tunings = GetVehicleMWTunings(GetVehicle());
 	if (tunings) {
