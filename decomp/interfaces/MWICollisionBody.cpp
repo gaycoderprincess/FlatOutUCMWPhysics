@@ -1,4 +1,3 @@
-UMath::Vector3 vInertiaTensor = {1.0, 2.0, 1.0}; // todo!
 class ICollisionBody : public IMWInterface {
 public:
 	ICollisionBody(Car* car) : pCar(car) {}
@@ -6,6 +5,7 @@ public:
 	static inline const char* _IIDName = "ICollisionBody";
 
 	Car* pCar;
+	UMath::Vector3 vTensorScale = {0.0, 0.0, 0.0};
 
 	// todo
 	virtual UMath::Vector3* GetForce() {
@@ -19,16 +19,16 @@ public:
 		return &tmp;
 	}
 
-	// todo important!!
 	virtual void SetCenterOfGravity(UMath::Vector3* cog) {
-
+		//pCar->vCenterOfMass[0] = cog->x;
+		//pCar->vCenterOfMass[1] = cog->y;
+		//pCar->vCenterOfMass[2] = cog->z;
 	}
 	virtual UMath::Vector3* GetCenterOfGravity() {
 		static UMath::Vector3 tmp;
 		tmp.x = pCar->vCenterOfMass[0];
 		tmp.y = pCar->vCenterOfMass[1];
 		tmp.z = pCar->vCenterOfMass[2];
-		//tmp = {0,0,0};
 		return &tmp;
 	}
 
@@ -54,13 +54,21 @@ public:
 		return &normal;
 	}
 	virtual UMath::Vector3* GetInertiaTensor() {
+		if (vTensorScale.x == 0.0f) {
+			MWCarTuning tune;
+			GetLerpedCarTuning(tune, mCOMObject->Find<IVehicle>()->GetVehicleName());
+			vTensorScale.x = tune.TENSOR_SCALE[0];
+			vTensorScale.y = tune.TENSOR_SCALE[1];
+			vTensorScale.z = tune.TENSOR_SCALE[2];
+		}
+
 		UMath::Vector3 dim;
 		dim.x = std::max(std::abs(pCar->vCollisionFullMin.x), std::abs(pCar->vCollisionFullMax.x));
 		dim.y = std::max(std::abs(pCar->vCollisionFullMin.y), std::abs(pCar->vCollisionFullMax.y));
 		dim.z = std::max(std::abs(pCar->vCollisionFullMin.z), std::abs(pCar->vCollisionFullMax.z));
 
 		static UMath::Vector3 tmp;
-		tmp = CalculateInertiaTensor(vInertiaTensor, pCar->fMass, dim);
+		tmp = CalculateInertiaTensor(vTensorScale, pCar->fMass, dim);
 		return &tmp;
 	}
 	virtual void Damp(float amount) {

@@ -48,6 +48,9 @@ CNyaTimer gGlobalTimer;
 #include "decomp/ConversionUtil.hpp"
 #include "decomp/UMathExtras.h"
 #include "decomp/HelperTypes.h"
+
+
+#include "MWCarTuning.h"
 #include "decomp/interfaces/MWInterface.h"
 #include "decomp/interfaces/MWIChassis.h"
 #include "decomp/interfaces/MWIRaceEngine.h"
@@ -61,8 +64,6 @@ CNyaTimer gGlobalTimer;
 #include "decomp/interfaces/MWIRigidBody.cpp"
 #include "decomp/interfaces/MWIInput.cpp"
 #include "decomp/interfaces/MWIHumanAI.cpp"
-
-#include "MWCarTuning.h"
 
 #include "decomp/behaviors/MWWheel.h"
 #include "decomp/behaviors/MWChassisBase.h"
@@ -102,6 +103,7 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	//	}
 	//}
 
+	pGameFlow->PreRace.fNitroMultiplier = 0.0;
 	pCar->fNitro = pEngine->GetNOSCapacity() * pCar->fMaxNitro;
 	if (pCar == pPlayerHost->aPlayers[0]->pCar) {
 		pCar->pPlayer->pIngameHUD->fRPMFraction = pEngine->GetRPM() / 10000.0;
@@ -142,18 +144,17 @@ void __attribute__((naked)) __fastcall NoSlideControlASM() {
 void SwitchToMWPhysics() {
 	if (!aEngines.empty() || !aSuspensions.empty()) return;
 
-	aPlayerInterfaces.clear();
 	for (int i = 0; i < pPlayerHost->GetNumPlayers(); i++) {
 		auto ply = pPlayerHost->aPlayers[i]->pCar;
 
-		aPlayerInterfaces.push_back({});
-		aPlayerInterfaces[aPlayerInterfaces.size()-1].pCar = ply;
-		aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new IVehicle(ply));
-		aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new IRigidBody(ply));
-		aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new ICollisionBody(ply));
-		aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new IInput(ply));
+		aPlayerInterfaces[i].aInterfaces.clear();
+		aPlayerInterfaces[i].pCar = ply;
+		aPlayerInterfaces[i].Add(new IVehicle(ply));
+		aPlayerInterfaces[i].Add(new IRigidBody(ply));
+		aPlayerInterfaces[i].Add(new ICollisionBody(ply));
+		aPlayerInterfaces[i].Add(new IInput(ply));
 		if (i == 0) {
-			aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new IHumanAI());
+			aPlayerInterfaces[i].Add(new IHumanAI());
 		}
 
 		auto engine = new EngineRacer(ply);
@@ -227,6 +228,8 @@ void DebugMenu() {
 		if (DrawMenuOption("SuspensionRacer")) {
 			ChloeMenuLib::BeginMenu();
 
+			QuickValueEditor("Mass", pPlayerHost->aPlayers[0]->pCar->fMass);
+
 			auto vGroundNormal = *aPlayerInterfaces[0].Find<ICollisionBody>()->GetGroundNormal();
 			DrawMenuOption(std::format("vGroundNormal {:.2f} {:.2f} {:.2f}", vGroundNormal.x, vGroundNormal.y, vGroundNormal.z));
 
@@ -268,11 +271,15 @@ void MainLoop() {
 			for (auto& ptr : ply.aInterfaces) {
 				delete ptr.pInterface;
 			}
+			ply.aInterfaces.clear();
+			ply.pCar = nullptr;
 		}
-		aPlayerInterfaces.clear();
+		return;
 	}
 
-	if (aEngines.empty() && aSuspensions.empty()) return;
+	if (aEngines.empty() && aSuspensions.empty()) {
+		SwitchToMWPhysics();
+	}
 	NyaHookLib::Patch<uint8_t>(0x43D69E, 0xEB); // disable auto reset
 }
 

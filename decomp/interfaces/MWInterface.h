@@ -46,7 +46,7 @@ public:
 		return p != nullptr;
 	}
 };
-std::vector<MWInterfaceList> aPlayerInterfaces;
+MWInterfaceList aPlayerInterfaces[32] = {};
 
 MWInterfaceList* GetPlayerInterface(Car* car) {
 	for (auto& ply : aPlayerInterfaces) {
