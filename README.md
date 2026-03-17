@@ -67,7 +67,7 @@ You should be able to build the project now in CLion.
 - Road King - Ford Mustang GT (Most Wanted)
 - Bullet GT - Porsche Carrera GT (Most Wanted)
 - Pimpster - Lexus IS300 (Most Wanted)
-- Flatmobile - Porsche Carrera GT (Most Wanted)
+- Flatmobile - CopSport (Most Wanted)
 - Mob Car - Mercedes-Benz CLK 500 (Most Wanted)
 - School Bus - Cadillac CTS (Most Wanted)
 - Truck - Cadillac CTS (Most Wanted)
