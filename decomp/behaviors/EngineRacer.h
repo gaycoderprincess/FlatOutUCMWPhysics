@@ -365,6 +365,9 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 	IVehicle* GetVehicle() {
 		return GetPlayerInterface(pCar)->Find<IVehicle>();
 	}
+	IPlayer* GetPlayer() {
+		return GetPlayerInterface(pCar)->Find<IPlayer>();
+	}
 
 	EngineRacer(Car* car);
 	void OnBehaviorChange();

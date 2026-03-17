@@ -60,6 +60,7 @@ CNyaTimer gGlobalTimer;
 #include "decomp/interfaces/MWITransmission.h"
 #include "decomp/interfaces/MWIEngine.h"
 #include "decomp/interfaces/MWIVehicle.cpp"
+#include "decomp/interfaces/MWIPlayer.cpp"
 #include "decomp/interfaces/MWICollisionBody.cpp"
 #include "decomp/interfaces/MWIRigidBody.cpp"
 #include "decomp/interfaces/MWIInput.cpp"
@@ -95,13 +96,15 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	pEngine->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pSuspension->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 
-	// todo this crashes the game in some nos gain function
-	//for (int i = 0; i < 4; i++) {
-	//	if (pCar->aTires[i].bOnGround = pSuspensionRacer->IsWheelOnGround(i)) {
-	//		pCar->pPlayer->nTimeInAir = 0.0;
-	//		pCar->pPlayer->fTimeInAirForBonus = 0.0;
-	//	}
-	//}
+	for (int i = 0; i < 4; i++) {
+		pCar->aTires[i].pGroundSurface = nullptr;
+		if (pCar->aTires[i].bOnGround = pSuspension->IsWheelOnGround(i)) {
+			auto surface = &pEnvironment->aSurfaces[pSuspension->GetWheelRoadSurface(i)];
+			pCar->aTires[i].pGroundSurface = &pCar->TireDynamics[surface->nDynamics];
+			pCar->pPlayer->nTimeInAir = 0.0;
+			pCar->pPlayer->fTimeInAirForBonus = 0.0;
+		}
+	}
 
 	pGameFlow->PreRace.fNitroMultiplier = 0.0;
 	pCar->fNitro = pEngine->GetNOSCapacity() * pCar->fMaxNitro;
@@ -178,9 +181,13 @@ void SwitchToMWPhysics() {
 	NyaHookLib::Patch<uint64_t>(0x42B1D3, 0x1DD890909090D8DD); // downforce rz
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42AFB9, &FO2DownforceASM);
 
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x42F9CE, &NoSlideControlASM);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x480D2C, &NoSlideControlASM);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x51460E, &NoSlideControlASM);
+	NyaHookLib::Patch<uint8_t>(0x42B4A0, 0xC3); // remove vanilla sliding behavior
+	NyaHookLib::Fill(0x42F9CE, 0x90, 5); // remove vanilla sliding behavior
+	NyaHookLib::Fill(0x480D2C, 0x90, 5); // remove vanilla sliding behavior
+	NyaHookLib::Fill(0x51460E, 0x90, 5); // remove vanilla sliding behavior
+	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x42F9CE, &NoSlideControlASM);
+	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x480D2C, &NoSlideControlASM);
+	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x51460E, &NoSlideControlASM);
 
 	// disable slidecontrol stuff in the fouc code
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B6B6, 0x42BCF7);

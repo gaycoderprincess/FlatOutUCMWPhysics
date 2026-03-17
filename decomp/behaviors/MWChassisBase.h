@@ -89,6 +89,9 @@ public:
 	IVehicle* GetVehicle() {
 		return GetPlayerInterface(pCar)->Find<IVehicle>();
 	}
+	IPlayer* GetPlayer() {
+		return GetPlayerInterface(pCar)->Find<IPlayer>();
+	}
 
 	const char* mChassisType = "Chassis";
 };

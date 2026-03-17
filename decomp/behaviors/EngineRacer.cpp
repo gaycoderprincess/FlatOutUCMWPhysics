@@ -540,16 +540,15 @@ float EngineRacer::DoNos(const Physics::Tunings *tunings, float dT, bool engaged
 	float speed_mph = MPS2MPH(GetVehicle()->GetAbsoluteSpeed());
 	float recharge_rate = 0.0f;
 
-	// todo?
-	//IPlayer *player = GetOwner()->GetPlayer();
-	//if (!player || player->CanRechargeNOS()) {
+	IPlayer *player = GetPlayer();
+	if (!player || player->CanRechargeNOS()) {
 		float min_speed = mMWInfo->RECHARGE_MIN_SPEED;
 		float max_speed = mMWInfo->RECHARGE_MAX_SPEED;
 		if (speed_mph >= min_speed && mGear >= G_FIRST) {
 			float t = UMath::Ramp(speed_mph, min_speed, max_speed);
 			recharge_rate = UMath::Lerp(mMWInfo->RECHARGE_MIN, mMWInfo->RECHARGE_MAX, t);
 		}
-	//}
+	}
 
 	if (mGear < G_FIRST || mThrottle <= 0.0f || this->IsBlown())
 		engaged = false;

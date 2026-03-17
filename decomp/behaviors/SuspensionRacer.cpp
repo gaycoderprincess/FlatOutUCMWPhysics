@@ -469,19 +469,18 @@ void SuspensionRacerMW::OnTaskSimulate(float dT) {
 	mSteering.CollisionTimer = UMath::Max(mSteering.CollisionTimer - state.time, 0.0f);
 	mGameBreaker = 0.0f;
 
-	// todo?
-	//IPlayer *player = GetOwner()->GetPlayer();
-	//if (player && player->InGameBreaker()) {
-	//	mGameBreaker = 1.0f;
-	//} else if (mGameBreaker > 0.0f) {
-	//	mGameBreaker -= state.time * TweakGameBreakerRampOutPhysicsTime;
-	//	mGameBreaker = UMath::Max(mGameBreaker, 0.0f);
-	//}
-	//if (mGameBreaker > 0.0f) {
-	//	UMath::Vector3 extra_df;
-	//	UMath::Scale(state.GetUpVector(), Tweak_GameBreakerExtraGs * mGameBreaker * state.mass * 9.81f, extra_df);
-	//	mRB->ResolveForce(&extra_df);
-	//}
+	IPlayer *player = GetPlayer();
+	if (player && player->InGameBreaker()) {
+		mGameBreaker = 1.0f;
+	} else if (mGameBreaker > 0.0f) {
+		mGameBreaker -= state.time * TweakGameBreakerRampOutPhysicsTime;
+		mGameBreaker = UMath::Max(mGameBreaker, 0.0f);
+	}
+	if (mGameBreaker > 0.0f) {
+		UMath::Vector3 extra_df;
+		UMath::Scale(state.GetUpVector(), Tweak_GameBreakerExtraGs * mGameBreaker * state.mass * 9.81f, extra_df);
+		mRB->ResolveForce(&extra_df);
+	}
 
 	float max_slip = ComputeMaxSlip(state);
 	float grip_scale = ComputeLateralGripScale(state);
@@ -520,7 +519,7 @@ void SuspensionRacerMW::OnTaskSimulate(float dT) {
 
 	DoTireHeat(state);
 	DoAerobatics(state);
-	DoSleep(state);
+	//DoSleep(state); // this is broken in flatout
 	ChassisMW::OnTaskSimulate(dT);
 }
 
@@ -921,13 +920,13 @@ void SuspensionRacerMW::DoDrifting(const State &state) {
 		float ang_vel = state.local_angular_vel.y;
 
 		// charge speedbreaker if not in use and drifting is detected
-		//if (mGameBreaker <= 0.0f && state.speed > MPH2MPS(Tweak_GameBreakerDriftRechargeMinSpeed) &&
-		//	UMath::Abs(yaw) > DEG2RAD(Tweak_GameBreakerDriftRechargeYaw)) {
-		//	IPlayer *player = GetOwner()->GetPlayer();
-		//	if (player) {
-		//		player->ChargeGameBreaker(state.time * Tweak_GameBreakerDriftRechargePerSec * mDrift.Value);
-		//	}
-		//}
+		if (mGameBreaker <= 0.0f && state.speed > MPH2MPS(Tweak_GameBreakerDriftRechargeMinSpeed) &&
+			UMath::Abs(yaw) > DEG2RAD(Tweak_GameBreakerDriftRechargeYaw)) {
+			IPlayer *player = GetPlayer();
+			if (player) {
+				player->ChargeGameBreaker(state.time * Tweak_GameBreakerDriftRechargePerSec * mDrift.Value);
+			}
+		}
 
 		// apply yaw damping torque
 		if ((yaw * ang_vel) < 0.0f && mNumWheelsOnGround >= 2) {
