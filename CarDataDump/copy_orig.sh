@@ -72,8 +72,8 @@ cp orig_mw_full/carreragt.conf car_29.conf # BulletGT
 cp orig_mw_full/carreragt_top.conf car_29_top.conf # BulletGT
 cp orig_mw_full/is300.conf car_40.conf # Pimpster
 cp orig_mw_full/is300_top.conf car_40_top.conf # Pimpster
-cp orig_mw_full/carreragt.conf car_41.conf # Flatmobile
-cp orig_mw_full/carreragt_top.conf car_41_top.conf # Flatmobile
+cp orig_mw_full/copsport.conf car_41.conf # Flatmobile
+cp orig_mw_full/copsport.conf car_41_top.conf # Flatmobile
 cp orig_mw_full/clk500.conf car_42.conf # MobCar
 cp orig_mw_full/clk500_top.conf car_42_top.conf # MobCar
 cp orig_mw_full/cts.conf car_43.conf # SchoolBus
