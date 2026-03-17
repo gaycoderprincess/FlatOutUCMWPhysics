@@ -28,7 +28,9 @@ public:
 		*out = pCar->GetMatrix()->z;
 	}
 	virtual void GetDimension(UMath::Vector3 *out) {
-		*out = pCar->vCollisionFullMax;
+		out->x = std::max(std::abs(pCar->vCollisionFullMin.x), std::abs(pCar->vCollisionFullMax.x));
+		out->y = std::max(std::abs(pCar->vCollisionFullMin.y), std::abs(pCar->vCollisionFullMax.y));
+		out->z = std::max(std::abs(pCar->vCollisionFullMin.z), std::abs(pCar->vCollisionFullMax.z));
 	}
 	virtual void ConvertWorldToLocal(UMath::Vector3 *val, bool translate) {
 		::ConvertWorldToLocal(pCar, *val, translate);
@@ -56,7 +58,7 @@ public:
 		bodyMatrix.p = {0,0,0}; // hmm...
 		auto mInvWorldTensor = GetInverseWorldTensor(*mCOMObject->Find<ICollisionBody>()->GetInertiaTensor(), bodyMatrix);
 
-		UMath::Vector3 mCOG = {0,0,0};
+		UMath::Vector3 mCOG = *mCOMObject->Find<ICollisionBody>()->GetCenterOfGravity();
 
 		NyaVec3 v22;
 		v22.x = ((bodyMatrix.x.x * mCOG.x) + (bodyMatrix.z.x * mCOG.z) + (bodyMatrix.y.x * mCOG.y));
@@ -64,6 +66,7 @@ public:
 		v22.z = ((bodyMatrix.x.z * mCOG.x) + (bodyMatrix.z.z * mCOG.z) + (bodyMatrix.y.z * mCOG.y));
 
 		*pCar->GetVelocity() += (force * oom * dT);
+		//pCar->GetMatrix()->p += (force * oom * dT) * dT;
 
 		pCar->GetAngVelocity()->x += (mInvWorldTensor.x.x * torque.x * dT) + (mInvWorldTensor.z.x * torque.z * dT) + (mInvWorldTensor.y.x * torque.y * dT);
 		pCar->GetAngVelocity()->y += (mInvWorldTensor.x.y * torque.x * dT) + (mInvWorldTensor.z.y * torque.z * dT) + (mInvWorldTensor.y.y * torque.y * dT);
@@ -86,7 +89,7 @@ public:
 		auto bodyMatrix = *pCar->GetMatrix();
 		auto position = pCar->GetMatrix()->p;
 
-		UMath::Vector3 mCOG = {0,0,0};
+		UMath::Vector3 mCOG = *mCOMObject->Find<ICollisionBody>()->GetCenterOfGravity();
 
 		UMath::Vector3 cg;
 		UMath::Vector3 torque;
@@ -104,7 +107,7 @@ public:
 		auto bodyMatrix = *pCar->GetMatrix();
 		auto position = pCar->GetMatrix()->p;
 
-		UMath::Vector3 mCOG = {0,0,0};
+		UMath::Vector3 mCOG = *mCOMObject->Find<ICollisionBody>()->GetCenterOfGravity();
 
 		UMath::Vector3 cg;
 		UMath::Vector3 torque;

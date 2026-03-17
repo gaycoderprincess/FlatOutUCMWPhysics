@@ -25,7 +25,10 @@ public:
 	}
 	virtual UMath::Vector3* GetCenterOfGravity() {
 		static UMath::Vector3 tmp;
-		tmp = {0,0,0};
+		tmp.x = pCar->vCenterOfMass[0];
+		tmp.y = pCar->vCenterOfMass[1];
+		tmp.z = pCar->vCenterOfMass[2];
+		//tmp = {0,0,0};
 		return &tmp;
 	}
 
@@ -51,8 +54,13 @@ public:
 		return &normal;
 	}
 	virtual UMath::Vector3* GetInertiaTensor() {
+		UMath::Vector3 dim;
+		dim.x = std::max(std::abs(pCar->vCollisionFullMin.x), std::abs(pCar->vCollisionFullMax.x));
+		dim.y = std::max(std::abs(pCar->vCollisionFullMin.y), std::abs(pCar->vCollisionFullMax.y));
+		dim.z = std::max(std::abs(pCar->vCollisionFullMin.z), std::abs(pCar->vCollisionFullMax.z));
+
 		static UMath::Vector3 tmp;
-		tmp = CalculateInertiaTensor(vInertiaTensor, pCar->fMass, pCar->vCollisionFullMax);
+		tmp = CalculateInertiaTensor(vInertiaTensor, pCar->fMass, dim);
 		return &tmp;
 	}
 	virtual void Damp(float amount) {

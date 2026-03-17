@@ -313,7 +313,6 @@ public:
 	WCollisionTri fFace;
 	float fYOffset;
 	int fSurface;
-	bool fFaceValid;
 
 	WWorldPos() {
 		memset(this,0,sizeof(*this));
@@ -324,8 +323,23 @@ public:
 		fYOffset = liftAmount;
 	}
 
-	bool Update(UMath::Vector3* pos, UMath::Vector4* dest, bool usecache, bool keep_valid) {
-		return false; // todo
+	bool Update(UMath::Vector3* pos, UMath::Vector4* dest) {
+		auto origin = *pos;
+		origin.y += fYOffset;
+		auto dir = NyaVec3(0,-1,0);
+
+		tLineOfSightIn prop;
+		prop.fMaxDistance = 10000;
+		tLineOfSightOut out;
+		if (CheckLineOfSight(&prop, pGameFlow->pHost->pUnkForLOS, &origin, &dir, &out)) {
+			dest->x = out.vHitNormal.x;
+			dest->y = out.vHitNormal.y;
+			dest->z = out.vHitNormal.z;
+			dest->w = -(out.fHitDistance - fYOffset); // todo is this correct?
+			fSurface = out.nSurfaceId;
+			return true;
+		}
+		return false;
 	}
 };
 

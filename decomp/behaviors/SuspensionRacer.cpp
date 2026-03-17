@@ -406,10 +406,13 @@ void SuspensionRacerMW::CreateTires() {
 	float axle_width_r = mMWAttributes->TRACK_WIDTH.At(1) - mMWAttributes->SECTION_WIDTH.At(1) * 0.001f;
 	float front_axle = mMWAttributes->FRONT_AXLE;
 
-	UMath::Vector3 fl(-axle_width_f * 0.5f, -dimension.y, front_axle);
-	UMath::Vector3 fr(axle_width_f * 0.5f, -dimension.y, front_axle);
-	UMath::Vector3 rl(-axle_width_r * 0.5f, -dimension.y, front_axle - wheelbase);
-	UMath::Vector3 rr(axle_width_r * 0.5f, -dimension.y, front_axle - wheelbase);
+	//float fWheelY = -dimension.y;
+	float fWheelY = -0.15;
+
+	UMath::Vector3 fl(-axle_width_f * 0.5f, fWheelY, front_axle);
+	UMath::Vector3 fr(axle_width_f * 0.5f, fWheelY, front_axle);
+	UMath::Vector3 rl(-axle_width_r * 0.5f, fWheelY, front_axle - wheelbase);
+	UMath::Vector3 rr(axle_width_r * 0.5f, fWheelY, front_axle - wheelbase);
 
 	GetWheel(0).SetLocalArm(fl);
 	GetWheel(1).SetLocalArm(fr);

@@ -28,7 +28,7 @@ bool WheelMW::UpdatePosition(const UMath::Vector3 &body_av, const UMath::Vector3
 	float prev = vehicle_height * 0.5f;
 	mWorldPos.SetTolerance(UMath::Min(tolerance, prev));
 
-	bool result = mWorldPos.Update(&mPosition, &mNormal, IsOnGround() && usecache, true);
+	bool result = mWorldPos.Update(&mPosition, &mNormal);
 	UpdateSurface(mWorldPos.fSurface);
 	return result;
 }

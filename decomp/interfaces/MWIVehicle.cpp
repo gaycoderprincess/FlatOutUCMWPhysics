@@ -8,7 +8,7 @@ public:
 
 	virtual const char* GetVehicleName() {
 		static std::string str;
-		str = std::format("car_{}", pCar->pPlayer->nCarId);
+		str = std::format("car_{}", GetCarDataID_slow(pCar->pPlayer->nCarId));
 		return str.c_str();
 	}
 	virtual int GetDriverStyle() { return STYLE_RACING; }
@@ -19,7 +19,7 @@ public:
 		return vel.z;
 	}
 	virtual float GetAbsoluteSpeed() { return std::abs(GetSpeed()); }
-	virtual bool IsStaging() { return false; } // todo
+	virtual bool IsStaging() { return pGameFlow->nRaceState == RACE_STATE_COUNTDOWN; }
 	virtual float GetPerfectLaunch() { return 0.0; }
 	virtual bool IsDestroyed() { return pCar->nIsWrecked; }
 };

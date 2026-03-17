@@ -40,20 +40,22 @@ void WriteLog(const std::string& str) {
 
 #define GET_FAKE_INTERFACE(base, type, var) { auto ptr = (uintptr_t)this; ptr += offsetof(base, var); return (type*)ptr; }
 
+#include "nya_commontimer.cpp"
+
 bool bRevLimiter = true;
-CNyaRaceTimer gGlobalTimer;
+CNyaTimer gGlobalTimer;
 
 #include "decomp/ConversionUtil.hpp"
 #include "decomp/UMathExtras.h"
 #include "decomp/HelperTypes.h"
 #include "decomp/interfaces/MWInterface.h"
-#include "decomp/interfaces/MWIChassis.cpp"
-#include "decomp/interfaces/MWIRaceEngine.cpp"
-#include "decomp/interfaces/MWITiptronic.cpp"
-#include "decomp/interfaces/MWIEngineDamage.cpp"
+#include "decomp/interfaces/MWIChassis.h"
+#include "decomp/interfaces/MWIRaceEngine.h"
+#include "decomp/interfaces/MWITiptronic.h"
+#include "decomp/interfaces/MWIEngineDamage.h"
 //#include "decomp/interfaces/MWIInductable.cpp"
-#include "decomp/interfaces/MWITransmission.cpp"
-#include "decomp/interfaces/MWIEngine.cpp"
+#include "decomp/interfaces/MWITransmission.h"
+#include "decomp/interfaces/MWIEngine.h"
 #include "decomp/interfaces/MWIVehicle.cpp"
 #include "decomp/interfaces/MWICollisionBody.cpp"
 #include "decomp/interfaces/MWIRigidBody.cpp"
@@ -73,6 +75,10 @@ CNyaRaceTimer gGlobalTimer;
 
 EngineRacer* pEngineRacer = nullptr;
 SuspensionRacerMW* pSuspensionRacer = nullptr;
+int GearPrintf(wchar_t* a1, size_t a2, const wchar_t* format, int) {
+	return _snwprintf(a1, a2, format, pEngineRacer->mGear);
+}
+
 void SwitchToMWPhysics() {
 	if (pEngineRacer || pSuspensionRacer) return;
 
@@ -88,6 +94,12 @@ void SwitchToMWPhysics() {
 	pSuspensionRacer = new SuspensionRacerMW(ply);
 	pEngineRacer->OnBehaviorChange();
 	pSuspensionRacer->OnBehaviorChange();
+
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B480, 0x42B494); // remove vanilla tire behavior
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E5310, 0x4E536E); // remove hud rpm updater
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E548E, 0x4E54C0); // remove hud gear updater
+
+	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x4EAC99, &GearPrintf);
 }
 
 void ValueEditorMenu(float& value) {
@@ -133,6 +145,21 @@ void DebugMenu() {
 			auto vGroundNormal = *gPlayerInterfaces.Find<ICollisionBody>()->GetGroundNormal();
 			DrawMenuOption(std::format("vGroundNormal {:.2f} {:.2f} {:.2f}", vGroundNormal.x, vGroundNormal.y, vGroundNormal.z));
 
+			auto vCenterOfMass = *(UMath::Vector3*)pPlayerHost->aPlayers[0]->pCar->vCenterOfMass;
+			auto vCenterOfMassAbsolute = *(UMath::Vector3*)pPlayerHost->aPlayers[0]->pCar->vCenterOfMassAbsolute;
+			DrawMenuOption(std::format("vCenterOfMass {:.2f} {:.2f} {:.2f}", vCenterOfMass.x, vCenterOfMass.y, vCenterOfMass.z));
+			DrawMenuOption(std::format("vCenterOfMassAbsolute {:.2f} {:.2f} {:.2f}", vCenterOfMassAbsolute.x, vCenterOfMassAbsolute.y, vCenterOfMassAbsolute.z));
+			DrawMenuOption(std::format("state.inertia {:.2f} {:.2f} {:.2f}", LastChassisState.inertia.x, LastChassisState.inertia.y, LastChassisState.inertia.z));
+			DrawMenuOption(std::format("state.linear_vel {:.2f} {:.2f} {:.2f}", LastChassisState.linear_vel.x, LastChassisState.linear_vel.y, LastChassisState.linear_vel.z));
+			DrawMenuOption(std::format("state.angular_vel {:.2f} {:.2f} {:.2f}", LastChassisState.angular_vel.x, LastChassisState.angular_vel.y, LastChassisState.angular_vel.z));
+			DrawMenuOption(std::format("state.local_vel {:.2f} {:.2f} {:.2f}", LastChassisState.local_vel.x, LastChassisState.local_vel.y, LastChassisState.local_vel.z));
+			DrawMenuOption(std::format("state.local_angular_vel {:.2f} {:.2f} {:.2f}", LastChassisState.local_angular_vel.x, LastChassisState.local_angular_vel.y, LastChassisState.local_angular_vel.z));
+
+			DrawMenuOption(std::format("mNumWheelsOnGround {}", pSuspensionRacer->mNumWheelsOnGround));
+			DrawMenuOption(std::format("mTires[0]->mCompression {:.2f}", pSuspensionRacer->mTires[0]->mCompression));
+			DrawMenuOption(std::format("mTires[0]->mNormal {:.2f} {:.2f} {:.2f} {:.2f}", pSuspensionRacer->mTires[0]->mNormal.x, pSuspensionRacer->mTires[0]->mNormal.y, pSuspensionRacer->mTires[0]->mNormal.z, pSuspensionRacer->mTires[0]->mNormal.w));
+			DrawMenuOption(std::format("mTires[0]->fYOffset {:.2f}", pSuspensionRacer->mTires[0]->mWorldPos.fYOffset));
+
 			ChloeMenuLib::EndMenu();
 		}
 	}
@@ -142,10 +169,17 @@ void DebugMenu() {
 
 void __fastcall DoFO2Downforce(Car* pCar) {
 	if (!pEngineRacer || !pSuspensionRacer) return;
+	if (pCar != pPlayerHost->aPlayers[0]->pCar) return;
 
-	gGlobalTimer.Process();
+	gGlobalTimer.fDeltaTime = 0.01;
+	//gGlobalTimer.Process();
 	pEngineRacer->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pSuspensionRacer->OnTaskSimulate(gGlobalTimer.fDeltaTime);
+
+	pCar->pPlayer->pIngameHUD->fRPMFraction = pEngineRacer->GetRPM() / 10000.0;
+	pCar->pPlayer->pIngameHUD->nGear = pEngineRacer->GetGear();
+	//pCar->fRPM = pEngineRacer->GetRPM();
+	//pCar->mGearbox.nGear = pEngineRacer->GetGear();
 }
 
 uintptr_t FO2SlideControlWrappedASM_jmp = 0x42AFBF;
@@ -162,6 +196,20 @@ void __attribute__((naked)) FO2DownforceASM() {
 	);
 }
 
+uintptr_t NoSlideControlASM_jmp = 0x42B4AE;
+void __attribute__((naked)) __fastcall NoSlideControlASM() {
+	__asm__ (
+		"push ebp\n\t"
+		"mov ebp, esp\n\t"
+		"and esp, 0xFFFFFFF8\n\t"
+		"sub esp, 0x98\n\t"
+		"fldz\n\t"
+		"jmp %0\n\t"
+			:
+			: "m" (NoSlideControlASM_jmp)
+	);
+}
+
 void MainLoop() {
 	NyaHookLib::Patch<uint64_t>(0x42B11C, 0x86D990909090D8DD); // downforce x
 	NyaHookLib::Patch<uint64_t>(0x42B132, 0x44D990909090D8DD); // downforce y
@@ -170,6 +218,14 @@ void MainLoop() {
 	NyaHookLib::Patch<uint64_t>(0x42B1B5, 0xCAD990909090D8DD); // downforce ry
 	NyaHookLib::Patch<uint64_t>(0x42B1D3, 0x1DD890909090D8DD); // downforce rz
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42AFB9, &FO2DownforceASM);
+
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x42F9CE, &NoSlideControlASM);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x480D2C, &NoSlideControlASM);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x51460E, &NoSlideControlASM);
+
+	// disable slidecontrol stuff in the fouc code
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B6B6, 0x42BCF7);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42C02C, 0x42C26D);
 }
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
