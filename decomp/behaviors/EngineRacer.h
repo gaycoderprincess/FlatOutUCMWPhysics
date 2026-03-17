@@ -362,15 +362,15 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 		bool mShiftingUp;
 	};
 
-	IVehicle* GetVehicle() {
-		return GetPlayerInterface(pCar)->Find<IVehicle>();
+	auto GetOwner() {
+		return GetPlayerInterface(pCar);
 	}
-	IPlayer* GetPlayer() {
-		return GetPlayerInterface(pCar)->Find<IPlayer>();
+
+	IVehicle* GetVehicle() {
+		return GetOwner()->Find<IVehicle>();
 	}
 
 	EngineRacer(Car* car);
-	void OnBehaviorChange();
 	GearID GuessGear(float speed);
 	float GuessRPM(float speed, GearID atgear);
 	ShiftPotential FindShiftPotential(GearID gear, float rpm, float rpmFromGround);
@@ -397,6 +397,7 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 	// Behavior
 	void Reset();
 	void OnTaskSimulate(float dT);
+	void OnBehaviorChange();
 
 	// ITransmission
 	float GetSpeedometer();
@@ -589,7 +590,9 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 	}
 
 	float GetCatchupCheat() {
-		// todo
+		if (mCheater) {
+			return mCheater->GetCatchupCheat();
+		}
 		return 0.0;
 	}
 
@@ -612,8 +615,11 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 	float mClutchRPMDiff;
 	bool mEngineBraking;
 	float mSportShifting;
-	Car* pCar;
+	IInput *mIInput;
+	IChassis *mSuspension;
+	ICheater *mCheater;
 	MWCarTuning* mMWInfo;
+	Car* pCar;
 	float mRPM;
 	ShiftStatus mShiftStatus;
 	ShiftPotential mShiftPotential;
@@ -624,7 +630,5 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 	bool mBlown;
 	float mSabotage;
 
-	IChassis* mSuspension;
-	IInput* mIInput;
 	int nLastRaceState;
 };

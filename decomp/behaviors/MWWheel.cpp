@@ -2,11 +2,14 @@ void WheelMW::UpdateSurface(int surface) {
 	mSurface = surface;
 }
 
-bool WheelMW::InitPosition(Car* car, double maxcompression) {
+bool WheelMW::InitPosition(ICollisionBody* cb, IRigidBody *rb, double maxcompression) {
 	WHEEL_FUNCTION_LOG("Wheel::InitPosition");
-	UMath::Matrix4 mat = *car->GetMatrix();
-	UMath::Vector3 dim = car->vCollisionFullMax; // todo is this correct
-	return UpdatePosition(*car->GetAngVelocity(), *car->GetVelocity(), mat, {0,0,0}, 0.0, maxcompression, false, dim.y * 2.0);
+	UMath::Matrix4 mat;
+	rb->GetMatrix4(&mat);
+	mat.p = *rb->GetPosition();
+	UMath::Vector3 dim;
+	rb->GetDimension(&dim);
+	return UpdatePosition(*rb->GetAngularVelocity(), *rb->GetLinearVelocity(), mat, {0,0,0}, 0.0, maxcompression, false, dim.y * 2.0);
 }
 
 bool WheelMW::UpdatePosition(const UMath::Vector3 &body_av, const UMath::Vector3 &body_lv,

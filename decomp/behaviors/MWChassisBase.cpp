@@ -1,7 +1,7 @@
 void ChassisMW::Destroy() {
 	CHASSIS_FUNCTION_LOG("Destroy");
 
-	GetPlayerInterface(pCar)->Remove<IChassis>(this);
+	GetOwner()->Remove<IChassis>(this);
 
 	delete mMWAttributes;
 
@@ -15,7 +15,7 @@ void ChassisMW::Create(Car* car) {
 
 	pCar = car;
 
-	GetPlayerInterface(pCar)->Add<IChassis>(this);
+	GetOwner()->Add<IChassis>(this);
 
 	mJumpTime = 0.0f;
 	mJumpAlititude = 0.0f;
@@ -23,16 +23,14 @@ void ChassisMW::Create(Car* car) {
 
 	mMWAttributes = new MWCarTuning;
 	GetLerpedCarTuning(*mMWAttributes, GetVehicle()->GetVehicleName());
-}
 
-void ChassisMW::OnBehaviorChange() {
-	GetPlayerInterface(pCar)->QueryInterface(&mRBComplex);
-	GetPlayerInterface(pCar)->QueryInterface(&mRB);
-	GetPlayerInterface(pCar)->QueryInterface(&mInput);
-	GetPlayerInterface(pCar)->QueryInterface(&mEngine);
-	GetPlayerInterface(pCar)->QueryInterface(&mTransmission);
-	GetPlayerInterface(pCar)->QueryInterface(&mEngineDamage);
-	//GetPlayerInterface(pCar)->QueryInterface(&mSpikeDamage);
+	GetOwner()->QueryInterface(&mRBComplex);
+	GetOwner()->QueryInterface(&mRB);
+	GetOwner()->QueryInterface(&mInput);
+	GetOwner()->QueryInterface(&mEngine);
+	GetOwner()->QueryInterface(&mTransmission);
+	GetOwner()->QueryInterface(&mEngineDamage);
+	GetOwner()->QueryInterface(&mSpikeDamage);
 }
 
 Meters ChassisMW::GuessCompression(unsigned int id, Newtons downforce) {
@@ -186,6 +184,16 @@ ChassisMW::SleepState ChassisMW::DoSleep(const ChassisMW::State &state) {
 	return SS_NONE;
 }
 
+void ChassisMW::OnBehaviorChange() {
+	GetOwner()->QueryInterface(&mTransmission);
+	GetOwner()->QueryInterface(&mEngine);
+	GetOwner()->QueryInterface(&mEngineDamage);
+	GetOwner()->QueryInterface(&mInput);
+	GetOwner()->QueryInterface(&mRBComplex);
+	GetOwner()->QueryInterface(&mRB);
+	GetOwner()->QueryInterface(&mSpikeDamage);
+}
+
 // Credits: Brawltendo
 void ChassisMW::ComputeAckerman(const float steering, const ChassisMW::State &state, UMath::Vector4 *left, UMath::Vector4 *right) {
 	int going_right = true;
@@ -318,14 +326,14 @@ void ChassisMW::ComputeState(float dT, ChassisMW::State &state) {
 	UMath::Rotate(state.cog, state.matrix, state.world_cog);
 
 	state.blown_tires = 0;
-	//if (mSpikeDamage) {
-	//	unsigned int num_wheels = GetIChassis()->GetNumWheels();
-	//	for (unsigned int i = 0; i < num_wheels; ++i) {
-	//		if (mSpikeDamage->GetTireDamage(i) == TIRE_DAMAGE_BLOWN) {
-	//			state.blown_tires |= (1 << i);
-	//		}
-	//	}
-	//}
+	if (mSpikeDamage) {
+		unsigned int num_wheels = GetNumWheels();
+		for (unsigned int i = 0; i < num_wheels; ++i) {
+			if (mSpikeDamage->GetTireDamage(i) == TIRE_DAMAGE_BLOWN) {
+				state.blown_tires |= (1 << i);
+			}
+		}
+	}
 
 	if (GetVehicle()->IsDestroyed()) {
 		state.flags |= State::IS_DESTROYED;

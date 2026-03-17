@@ -52,7 +52,6 @@ public:
 	void Create(Car* car);
 	void Destroy();
 
-	void OnBehaviorChange();
 	Mps ComputeMaxSlip(const State &state);
 	void DoTireHeat(const State &state);
 	float ComputeLateralGripScale(const State &state);
@@ -66,34 +65,36 @@ public:
 	void DoJumpStabilizer(const State &state);
 
 	Meters GuessCompression(unsigned int id, float downforce);
+	void OnBehaviorChange();
 	float GetRenderMotion();
 	Meters GetRideHeight(unsigned int idx);
 	float CalculateUndersteerFactor();
 	float CalculateOversteerFactor();
 	void OnTaskSimulate(float dT);
 
+	ICollisionBody *mRBComplex;
+	IRigidBody *mRB;
+	IInput *mInput;
+	IEngine *mEngine;
+	ITransmission *mTransmission;
+	//IDragTransmission *mDragTransmission;
+	IEngineDamage *mEngineDamage;
+	ISpikeable *mSpikeDamage;
 	Car* pCar;
 	MWCarTuning* mMWAttributes;
 	float mJumpTime;
 	float mJumpAlititude;
 	float mTireHeat;
 
-	IRigidBody* mRB;
-	ICollisionBody* mRBComplex;
-	IInput* mInput;
-	IEngineDamage* mEngineDamage;
-	IHumanAI* mHumanAI;
-	IEngine* mEngine;
-	ITransmission* mTransmission;
-
-	int nLastRaceState;
+	auto GetOwner() {
+		return GetPlayerInterface(pCar);
+	}
 
 	IVehicle* GetVehicle() {
-		return GetPlayerInterface(pCar)->Find<IVehicle>();
+		return GetOwner()->Find<IVehicle>();
 	}
-	IPlayer* GetPlayer() {
-		return GetPlayerInterface(pCar)->Find<IPlayer>();
-	}
+
+	int nLastRaceState;
 
 	const char* mChassisType = "Chassis";
 };

@@ -174,7 +174,6 @@ class SuspensionRacerMW : public ChassisMW {
 	// Methods
 	SuspensionRacerMW(Car* car);
 	~SuspensionRacerMW();
-	void OnBehaviorChange();
 	void CreateTires();
 	void OnTaskSimulate(float dT);
 	void DoDrifting(const State &state);
@@ -191,6 +190,7 @@ class SuspensionRacerMW : public ChassisMW {
 	float CalcYawControlLimit(float speed);
 
 	// Overrides
+	void OnBehaviorChange();
 	Meters GetRideHeight(unsigned int idx);
 	Radians GetWheelAngularVelocity(int index);
 	void MatchSpeed(float speed);
@@ -407,6 +407,7 @@ class SuspensionRacerMW : public ChassisMW {
 		return *mTires[i];
 	}
 
+	IHumanAI *mHumanAI;
 	float mGameBreaker;
 	unsigned int mNumWheelsOnGround;
 	float mLastGroundCollision;
@@ -414,9 +415,6 @@ class SuspensionRacerMW : public ChassisMW {
 	Burnout mBurnOut;
 	Steering mSteering;
 	Tire *mTires[4];
-
-	void ApplyVehicleEntryForces(bool enteringVehicle, const UMath::Vector3 &pos, bool calledfromEvent) {}
-	float GetDynamicRideHeight(unsigned int idx, State*) { SUSPENSIONRACER_FUNCTION_LOG("GetDynamicRideHeight"); return GetRideHeight(idx); }
 };
 ChassisMW::State LastChassisState = {};
 

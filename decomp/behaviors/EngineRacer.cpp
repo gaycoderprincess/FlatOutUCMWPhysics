@@ -3,14 +3,12 @@ EngineRacer::EngineRacer(Car* car) {
 
 	pCar = car;
 
-	GetPlayerInterface(pCar)->Add<IEngine>(this);
-	GetPlayerInterface(pCar)->Add<ITransmission>(this);
-	//GetPlayerInterface(pCar)->Add<IInductable>(this);
-	GetPlayerInterface(pCar)->Add<ITiptronic>(this);
-	GetPlayerInterface(pCar)->Add<IRaceEngine>(this);
-	GetPlayerInterface(pCar)->Add<IEngineDamage>(this);
-
-	OnBehaviorChange();
+	GetOwner()->Add<IEngine>(this);
+	GetOwner()->Add<ITransmission>(this);
+	//GetOwner()->Add<IInductable>(this);
+	GetOwner()->Add<ITiptronic>(this);
+	GetOwner()->Add<IRaceEngine>(this);
+	GetOwner()->Add<IEngineDamage>(this);
 
 	mDriveTorque = 0.0f;
 	mDriveTorqueAtEngine = 0.0f;
@@ -29,6 +27,8 @@ EngineRacer::EngineRacer(Car* car) {
 	mClutchRPMDiff = 0.0f;
 	mEngineBraking = false;
 	mSportShifting = 0.0f;
+	mIInput = nullptr;
+	mSuspension = nullptr;
 
 	mMWInfo = new MWCarTuning;
 	GetLerpedCarTuning(*mMWInfo, GetVehicle()->GetVehicleName());
@@ -41,6 +41,10 @@ EngineRacer::EngineRacer(Car* car) {
 	mClutch = Clutch();
 	mBlown = false;
 	mSabotage = 0.0f;
+
+	GetOwner()->QueryInterface(&mIInput);
+	GetOwner()->QueryInterface(&mSuspension);
+	GetOwner()->QueryInterface(&mCheater);
 
 	if (mMWInfo->NOS_CAPACITY > 0.0f) {
 		mNOSCapacity = 1.0f;
@@ -56,26 +60,28 @@ EngineRacer::EngineRacer(Car* car) {
 EngineRacer::~EngineRacer() {
 	ENGINERACER_FUNCTION_LOG("dtor");
 
-	GetPlayerInterface(pCar)->Remove<IEngine>(this);
-	GetPlayerInterface(pCar)->Remove<ITransmission>(this);
-	//GetPlayerInterface(pCar)->Remove<IInductable>(this);
-	GetPlayerInterface(pCar)->Remove<ITiptronic>(this);
-	GetPlayerInterface(pCar)->Remove<IRaceEngine>(this);
-	GetPlayerInterface(pCar)->Remove<IEngineDamage>(this);
+	GetOwner()->Remove<IEngine>(this);
+	GetOwner()->Remove<ITransmission>(this);
+	//GetOwner()->Remove<IInductable>(this);
+	GetOwner()->Remove<ITiptronic>(this);
+	GetOwner()->Remove<IRaceEngine>(this);
+	GetOwner()->Remove<IEngineDamage>(this);
 
 	delete mMWInfo;
 
 	WriteLog("EngineRacer::dtor finished");
 }
 
-void EngineRacer::OnBehaviorChange() {
-	GetPlayerInterface(pCar)->QueryInterface(&mIInput);
-	GetPlayerInterface(pCar)->QueryInterface(&mSuspension);
-}
-
 float EngineRacer::GetHorsePower() {
 	float engine_torque = GetEngineTorque(mRPM);
 	return NM2HP(engine_torque * mThrottle, mRPM);
+}
+
+void EngineRacer::OnBehaviorChange() {
+	ENGINERACER_FUNCTION_LOG("OnBehaviorChange");
+	GetOwner()->QueryInterface(&mIInput);
+	GetOwner()->QueryInterface(&mCheater);
+	GetOwner()->QueryInterface(&mSuspension);
 }
 
 void EngineRacer::Sabotage(float time) {
@@ -539,8 +545,8 @@ float EngineRacer::DoNos(const Physics::Tunings *tunings, float dT, bool engaged
 
 	float speed_mph = MPS2MPH(GetVehicle()->GetAbsoluteSpeed());
 	float recharge_rate = 0.0f;
+	IPlayer *player = GetOwner()->GetPlayer();
 
-	IPlayer *player = GetPlayer();
 	if (!player || player->CanRechargeNOS()) {
 		float min_speed = mMWInfo->RECHARGE_MIN_SPEED;
 		float max_speed = mMWInfo->RECHARGE_MAX_SPEED;

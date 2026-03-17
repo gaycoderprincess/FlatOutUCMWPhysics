@@ -65,6 +65,8 @@ CNyaTimer gGlobalTimer;
 #include "decomp/interfaces/MWICollisionBody.cpp"
 #include "decomp/interfaces/MWIRigidBody.cpp"
 #include "decomp/interfaces/MWIInput.cpp"
+#include "decomp/interfaces/MWISpikeable.cpp"
+#include "decomp/interfaces/MWICheater.cpp"
 #include "decomp/interfaces/MWIHumanAI.cpp"
 
 #include "decomp/behaviors/MWWheel.h"
