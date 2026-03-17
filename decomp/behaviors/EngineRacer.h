@@ -363,7 +363,7 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 	};
 
 	IVehicle* GetVehicle() {
-		return gPlayerInterfaces.Find<IVehicle>();
+		return GetPlayerInterface(pCar)->Find<IVehicle>();
 	}
 
 	EngineRacer(Car* car);

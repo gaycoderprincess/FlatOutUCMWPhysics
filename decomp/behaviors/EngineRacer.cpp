@@ -3,12 +3,12 @@ EngineRacer::EngineRacer(Car* car) {
 
 	pCar = car;
 
-	gPlayerInterfaces.Add<IEngine>(this);
-	gPlayerInterfaces.Add<ITransmission>(this);
-	//gPlayerInterfaces.Add<IInductable>(this);
-	gPlayerInterfaces.Add<ITiptronic>(this);
-	gPlayerInterfaces.Add<IRaceEngine>(this);
-	gPlayerInterfaces.Add<IEngineDamage>(this);
+	GetPlayerInterface(pCar)->Add<IEngine>(this);
+	GetPlayerInterface(pCar)->Add<ITransmission>(this);
+	//GetPlayerInterface(pCar)->Add<IInductable>(this);
+	GetPlayerInterface(pCar)->Add<ITiptronic>(this);
+	GetPlayerInterface(pCar)->Add<IRaceEngine>(this);
+	GetPlayerInterface(pCar)->Add<IEngineDamage>(this);
 
 	OnBehaviorChange();
 
@@ -56,12 +56,12 @@ EngineRacer::EngineRacer(Car* car) {
 EngineRacer::~EngineRacer() {
 	ENGINERACER_FUNCTION_LOG("dtor");
 
-	gPlayerInterfaces.Remove<IEngine>(this);
-	gPlayerInterfaces.Remove<ITransmission>(this);
-	//gPlayerInterfaces.Remove<IInductable>(this);
-	gPlayerInterfaces.Remove<ITiptronic>(this);
-	gPlayerInterfaces.Remove<IRaceEngine>(this);
-	gPlayerInterfaces.Remove<IEngineDamage>(this);
+	GetPlayerInterface(pCar)->Remove<IEngine>(this);
+	GetPlayerInterface(pCar)->Remove<ITransmission>(this);
+	//GetPlayerInterface(pCar)->Remove<IInductable>(this);
+	GetPlayerInterface(pCar)->Remove<ITiptronic>(this);
+	GetPlayerInterface(pCar)->Remove<IRaceEngine>(this);
+	GetPlayerInterface(pCar)->Remove<IEngineDamage>(this);
 
 	delete mMWInfo;
 
@@ -69,8 +69,8 @@ EngineRacer::~EngineRacer() {
 }
 
 void EngineRacer::OnBehaviorChange() {
-	gPlayerInterfaces.QueryInterface(&mIInput);
-	gPlayerInterfaces.QueryInterface(&mSuspension);
+	GetPlayerInterface(pCar)->QueryInterface(&mIInput);
+	GetPlayerInterface(pCar)->QueryInterface(&mSuspension);
 }
 
 float EngineRacer::GetHorsePower() {

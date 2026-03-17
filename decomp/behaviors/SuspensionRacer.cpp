@@ -35,7 +35,7 @@ SuspensionRacerMW::~SuspensionRacerMW() {
 
 void SuspensionRacerMW::OnBehaviorChange() {
 	ChassisMW::OnBehaviorChange();
-	gPlayerInterfaces.QueryInterface(&mHumanAI);
+	GetPlayerInterface(pCar)->QueryInterface(&mHumanAI);
 }
 
 const float ZeroDegreeTable[6] = {0.0f};

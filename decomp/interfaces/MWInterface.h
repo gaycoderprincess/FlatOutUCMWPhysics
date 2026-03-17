@@ -8,6 +8,7 @@ public:
 
 class MWInterfaceList {
 public:
+	Car* pCar;
 	struct MWInterfaceEntry {
 		IMWInterface* pInterface;
 		uintptr_t id;
@@ -45,5 +46,11 @@ public:
 		return p != nullptr;
 	}
 };
+std::vector<MWInterfaceList> aPlayerInterfaces;
 
-MWInterfaceList gPlayerInterfaces;
+MWInterfaceList* GetPlayerInterface(Car* car) {
+	for (auto& ply : aPlayerInterfaces) {
+		if (ply.pCar == car) return &ply;
+	}
+	return nullptr;
+}

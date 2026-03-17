@@ -87,7 +87,7 @@ public:
 	ITransmission* mTransmission;
 
 	IVehicle* GetVehicle() {
-		return gPlayerInterfaces.Find<IVehicle>();
+		return GetPlayerInterface(pCar)->Find<IVehicle>();
 	}
 
 	const char* mChassisType = "Chassis";

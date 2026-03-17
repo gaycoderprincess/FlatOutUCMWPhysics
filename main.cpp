@@ -73,20 +73,26 @@ CNyaTimer gGlobalTimer;
 #include "decomp/behaviors/SuspensionRacer.cpp"
 #include "decomp/behaviors/EngineRacer.cpp"
 
-EngineRacer* pEngineRacer = nullptr;
-SuspensionRacerMW* pSuspensionRacer = nullptr;
-int GearPrintf(wchar_t* a1, size_t a2, const wchar_t* format, int) {
-	return _snwprintf(a1, a2, format, pEngineRacer->mGear);
-}
-
+std::vector<EngineRacer*> aEngines;
+std::vector<SuspensionRacerMW*> aSuspensions;
 void __fastcall DoFO2Downforce(Car* pCar) {
-	if (!pEngineRacer || !pSuspensionRacer) return;
-	if (pCar != pPlayerHost->aPlayers[0]->pCar) return;
+	if (aEngines.empty() && aSuspensions.empty()) return;
 
 	gGlobalTimer.fDeltaTime = 0.01;
 	//gGlobalTimer.Process();
-	pEngineRacer->OnTaskSimulate(gGlobalTimer.fDeltaTime);
-	pSuspensionRacer->OnTaskSimulate(gGlobalTimer.fDeltaTime);
+
+	EngineRacer* pEngine = nullptr;
+	SuspensionRacerMW* pSuspension = nullptr;
+	for (auto& engine : aEngines) {
+		if (engine->pCar != pCar) continue;
+		pEngine = engine;
+	}
+	for (auto& susp : aSuspensions) {
+		if (susp->pCar != pCar) continue;
+		pSuspension = susp;
+	}
+	pEngine->OnTaskSimulate(gGlobalTimer.fDeltaTime);
+	pSuspension->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 
 	// todo this crashes the game in some nos gain function
 	//for (int i = 0; i < 4; i++) {
@@ -96,11 +102,13 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	//	}
 	//}
 
-	pCar->fNitro = pEngineRacer->GetNOSCapacity() * pCar->fMaxNitro;
-	pCar->pPlayer->pIngameHUD->fRPMFraction = pEngineRacer->GetRPM() / 10000.0;
-	pCar->pPlayer->pIngameHUD->nGear = pEngineRacer->GetGear();
-	//pCar->fRPM = pEngineRacer->GetRPM();
-	//pCar->mGearbox.nGear = pEngineRacer->GetGear();
+	pCar->fNitro = pEngine->GetNOSCapacity() * pCar->fMaxNitro;
+	if (pCar == pPlayerHost->aPlayers[0]->pCar) {
+		pCar->pPlayer->pIngameHUD->fRPMFraction = pEngine->GetRPM() / 10000.0;
+		pCar->pPlayer->pIngameHUD->nGear = pEngine->GetGear();
+		//pCar->fRPM = pEngineRacer->GetRPM();
+		//pCar->mGearbox.nGear = pEngineRacer->GetGear();
+	}
 }
 
 uintptr_t FO2SlideControlWrappedASM_jmp = 0x42AFBF;
@@ -132,27 +140,34 @@ void __attribute__((naked)) __fastcall NoSlideControlASM() {
 }
 
 void SwitchToMWPhysics() {
-	if (pEngineRacer || pSuspensionRacer) return;
+	if (!aEngines.empty() || !aSuspensions.empty()) return;
 
-	auto ply = pPlayerHost->aPlayers[0]->pCar;
+	aPlayerInterfaces.clear();
+	for (int i = 0; i < pPlayerHost->GetNumPlayers(); i++) {
+		auto ply = pPlayerHost->aPlayers[i]->pCar;
 
-	gPlayerInterfaces.Add(new IVehicle(ply));
-	gPlayerInterfaces.Add(new IRigidBody(ply));
-	gPlayerInterfaces.Add(new ICollisionBody(ply));
-	gPlayerInterfaces.Add(new IInput(ply));
-	gPlayerInterfaces.Add(new IHumanAI());
+		aPlayerInterfaces.push_back({});
+		aPlayerInterfaces[aPlayerInterfaces.size()-1].pCar = ply;
+		aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new IVehicle(ply));
+		aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new IRigidBody(ply));
+		aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new ICollisionBody(ply));
+		aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new IInput(ply));
+		if (i == 0) {
+			aPlayerInterfaces[aPlayerInterfaces.size()-1].Add(new IHumanAI());
+		}
 
-	pEngineRacer = new EngineRacer(ply);
-	pSuspensionRacer = new SuspensionRacerMW(ply);
-	pEngineRacer->OnBehaviorChange();
-	pSuspensionRacer->OnBehaviorChange();
+		auto engine = new EngineRacer(ply);
+		auto susp = new SuspensionRacerMW(ply);
+		engine->OnBehaviorChange();
+		susp->OnBehaviorChange();
+		aEngines.push_back(engine);
+		aSuspensions.push_back(susp);
+	}
 
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B480, 0x42B494); // remove vanilla tire behavior
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42D650, 0x42EA38); // remove vanilla suspension behavior
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E5310, 0x4E536E); // remove hud rpm updater
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E548E, 0x4E54C0); // remove hud gear updater
-
-	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x4EAC99, &GearPrintf);
 
 	NyaHookLib::Patch<uint64_t>(0x42B11C, 0x86D990909090D8DD); // downforce x
 	NyaHookLib::Patch<uint64_t>(0x42B132, 0x44D990909090D8DD); // downforce y
@@ -198,7 +213,7 @@ void DebugMenu() {
 		SwitchToMWPhysics();
 	}
 
-	if (pEngineRacer) {
+	if (!aEngines.empty()) {
 		if (DrawMenuOption("EngineRacer")) {
 			ChloeMenuLib::BeginMenu();
 
@@ -207,11 +222,12 @@ void DebugMenu() {
 			ChloeMenuLib::EndMenu();
 		}
 	}
-	if (pSuspensionRacer) {
+	if (!aSuspensions.empty()) {
+		auto susp = aSuspensions[0];
 		if (DrawMenuOption("SuspensionRacer")) {
 			ChloeMenuLib::BeginMenu();
 
-			auto vGroundNormal = *gPlayerInterfaces.Find<ICollisionBody>()->GetGroundNormal();
+			auto vGroundNormal = *aPlayerInterfaces[0].Find<ICollisionBody>()->GetGroundNormal();
 			DrawMenuOption(std::format("vGroundNormal {:.2f} {:.2f} {:.2f}", vGroundNormal.x, vGroundNormal.y, vGroundNormal.z));
 
 			auto vCenterOfMass = *(UMath::Vector3*)pPlayerHost->aPlayers[0]->pCar->vCenterOfMass;
@@ -224,10 +240,10 @@ void DebugMenu() {
 			DrawMenuOption(std::format("state.local_vel {:.2f} {:.2f} {:.2f}", LastChassisState.local_vel.x, LastChassisState.local_vel.y, LastChassisState.local_vel.z));
 			DrawMenuOption(std::format("state.local_angular_vel {:.2f} {:.2f} {:.2f}", LastChassisState.local_angular_vel.x, LastChassisState.local_angular_vel.y, LastChassisState.local_angular_vel.z));
 
-			DrawMenuOption(std::format("mNumWheelsOnGround {}", pSuspensionRacer->mNumWheelsOnGround));
-			DrawMenuOption(std::format("mTires[0]->mCompression {:.2f}", pSuspensionRacer->mTires[0]->mCompression));
-			DrawMenuOption(std::format("mTires[0]->mNormal {:.2f} {:.2f} {:.2f} {:.2f}", pSuspensionRacer->mTires[0]->mNormal.x, pSuspensionRacer->mTires[0]->mNormal.y, pSuspensionRacer->mTires[0]->mNormal.z, pSuspensionRacer->mTires[0]->mNormal.w));
-			DrawMenuOption(std::format("mTires[0]->fYOffset {:.2f}", pSuspensionRacer->mTires[0]->mWorldPos.fYOffset));
+			DrawMenuOption(std::format("mNumWheelsOnGround {}", susp->mNumWheelsOnGround));
+			DrawMenuOption(std::format("mTires[0]->mCompression {:.2f}", susp->mTires[0]->mCompression));
+			DrawMenuOption(std::format("mTires[0]->mNormal {:.2f} {:.2f} {:.2f} {:.2f}", susp->mTires[0]->mNormal.x, susp->mTires[0]->mNormal.y, susp->mTires[0]->mNormal.z, susp->mTires[0]->mNormal.w));
+			DrawMenuOption(std::format("mTires[0]->fYOffset {:.2f}", susp->mTires[0]->mWorldPos.fYOffset));
 
 			ChloeMenuLib::EndMenu();
 		}
@@ -238,19 +254,25 @@ void DebugMenu() {
 
 void MainLoop() {
 	if (pLoadingScreen || pGameFlow->nGameState != GAME_STATE_RACE) {
-		delete pEngineRacer;
-		delete pSuspensionRacer;
-		pEngineRacer = nullptr;
-		pSuspensionRacer = nullptr;
-
-		// delete all other interfaces too
-		for (auto& ptr : gPlayerInterfaces.aInterfaces) {
-			delete ptr.pInterface;
+		for (auto& susp : aEngines) {
+			delete susp;
 		}
-		gPlayerInterfaces.aInterfaces.clear();
+		for (auto& susp : aSuspensions) {
+			delete susp;
+		}
+		aEngines.clear();
+		aSuspensions.clear();
+
+		for (auto& ply : aPlayerInterfaces) {
+			// delete all other interfaces too
+			for (auto& ptr : ply.aInterfaces) {
+				delete ptr.pInterface;
+			}
+		}
+		aPlayerInterfaces.clear();
 	}
 
-	if (!pEngineRacer || !pSuspensionRacer) return;
+	if (aEngines.empty() && aSuspensions.empty()) return;
 	NyaHookLib::Patch<uint8_t>(0x43D69E, 0xEB); // disable auto reset
 }
 

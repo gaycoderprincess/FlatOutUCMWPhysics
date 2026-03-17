@@ -1,7 +1,7 @@
 void ChassisMW::Destroy() {
 	CHASSIS_FUNCTION_LOG("Destroy");
 
-	gPlayerInterfaces.Remove<IChassis>(this);
+	GetPlayerInterface(pCar)->Remove<IChassis>(this);
 
 	delete mMWAttributes;
 
@@ -13,26 +13,26 @@ void ChassisMW::Create(Car* car) {
 
 	mChassisType = "Chassis";
 
-	gPlayerInterfaces.Add<IChassis>(this);
+	pCar = car;
+
+	GetPlayerInterface(pCar)->Add<IChassis>(this);
 
 	mJumpTime = 0.0f;
 	mJumpAlititude = 0.0f;
 	mTireHeat = 0.0f;
-
-	pCar = car;
 
 	mMWAttributes = new MWCarTuning;
 	GetLerpedCarTuning(*mMWAttributes, GetVehicle()->GetVehicleName());
 }
 
 void ChassisMW::OnBehaviorChange() {
-	gPlayerInterfaces.QueryInterface(&mRBComplex);
-	gPlayerInterfaces.QueryInterface(&mRB);
-	gPlayerInterfaces.QueryInterface(&mInput);
-	gPlayerInterfaces.QueryInterface(&mEngine);
-	gPlayerInterfaces.QueryInterface(&mTransmission);
-	gPlayerInterfaces.QueryInterface(&mEngineDamage);
-	//gPlayerInterfaces.QueryInterface(&mSpikeDamage);
+	GetPlayerInterface(pCar)->QueryInterface(&mRBComplex);
+	GetPlayerInterface(pCar)->QueryInterface(&mRB);
+	GetPlayerInterface(pCar)->QueryInterface(&mInput);
+	GetPlayerInterface(pCar)->QueryInterface(&mEngine);
+	GetPlayerInterface(pCar)->QueryInterface(&mTransmission);
+	GetPlayerInterface(pCar)->QueryInterface(&mEngineDamage);
+	//GetPlayerInterface(pCar)->QueryInterface(&mSpikeDamage);
 }
 
 Meters ChassisMW::GuessCompression(unsigned int id, Newtons downforce) {
