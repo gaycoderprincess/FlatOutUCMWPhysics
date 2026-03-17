@@ -10,7 +10,7 @@ public:
 	virtual float GetControlBrake() { return pCar->fBrakePedal; }
 	virtual float GetControlHandBrake() { return pCar->fHandbrake; }
 	virtual float GetControlSteering() {
-		if (pCar->pPlayer->nPlayerType == PLAYERTYPE_AI) return pCar->fSteerAngle;
+		if (pCar->pPlayer->nPlayerType == PLAYERTYPE_AI || pGameFlow->nRaceState > RACE_STATE_RACING) return pCar->fSteerAngle;
 
 		auto ply = pCar->pPlayer;
 		if (ply->nIsUsingKeyboard) {
