@@ -43,6 +43,7 @@ void WriteLog(const std::string& str) {
 #include "nya_commontimer.cpp"
 
 bool bRevLimiter = true;
+float fUpgradeLevel = 1.0;
 CNyaTimer gGlobalTimer;
 
 #include "decomp/ConversionUtil.hpp"
@@ -172,6 +173,9 @@ void SwitchToMWPhysics() {
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42D650, 0x42EA38); // remove vanilla suspension behavior
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E5310, 0x4E536E); // remove hud rpm updater
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E548E, 0x4E54C0); // remove hud gear updater
+	NyaHookLib::Patch<uint8_t>(0x42FD60, 0xC3); // remove rubber walls and some tire stuff
+	NyaHookLib::Patch<uint8_t>(0x42AF43, 0xEB); // remove turbo and nos
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42D21C, 0x42D634); // remove tire forces
 
 	NyaHookLib::Patch<uint64_t>(0x42B11C, 0x86D990909090D8DD); // downforce x
 	NyaHookLib::Patch<uint64_t>(0x42B132, 0x44D990909090D8DD); // downforce y

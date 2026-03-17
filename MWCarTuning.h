@@ -365,7 +365,11 @@ void GetLerpedCarTuning(MWCarTuning& tmp, const std::string& model, float brake,
 }
 
 void GetLerpedCarTuning(MWCarTuning& out, const std::string& model) {
-	return GetLerpedCarTuning(out, model, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0); // todo tunings
+	float f = pGameFlow->PreRace.fUpgradeLevel;
+	if (pGameFlow->PreRace.nMode == GM_CAREER) {
+		f = 1.0;
+	}
+	return GetLerpedCarTuning(out, model, f, f, f, f, f, f, f);
 }
 
 Physics::Tunings* GetVehicleMWTunings(void* veh) {

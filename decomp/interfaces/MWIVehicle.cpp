@@ -21,7 +21,7 @@ public:
 		return vel.z >= 0.0 ? GetAbsoluteSpeed() : -GetAbsoluteSpeed();
 	}
 	virtual float GetAbsoluteSpeed() { return pCar->GetVelocity()->length(); }
-	virtual bool IsStaging() { return pGameFlow->nRaceState == RACE_STATE_COUNTDOWN; }
+	virtual bool IsStaging() { return pGameFlow->nRaceState <= RACE_STATE_COUNTDOWN; }
 	virtual float GetPerfectLaunch() { return 0.0; }
 	virtual bool IsDestroyed() { return pCar->nIsWrecked; }
 };
