@@ -8,7 +8,9 @@ public:
 
 	virtual const char* GetVehicleName() {
 		static std::string str;
-		str = std::format("car_{}", GetCarDataID_slow(pCar->pPlayer->nCarId));
+		auto carId = GetCarDataID_slow(pCar->pPlayer->nCarId);
+		if (carId >= 200 && carId < 300) carId -= 200; // fo2 cars
+		str = std::format("car_{}", carId);
 		return str.c_str();
 	}
 	virtual int GetDriverStyle() { return STYLE_RACING; }

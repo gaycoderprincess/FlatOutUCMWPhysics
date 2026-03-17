@@ -33,7 +33,20 @@ public:
 	}
 
 	virtual bool IsInGroundContact() {
-		return true; // todo
+		static UMath::Vector3 normal;
+		normal = {0,1,0};
+
+		auto origin = pCar->GetMatrix()->p;
+		origin.y += 2;
+		auto dir = NyaVec3(0,-1,0);
+
+		tLineOfSightIn prop;
+		prop.fMaxDistance = 10000;
+		tLineOfSightOut out;
+		if (CheckLineOfSight(&prop, pGameFlow->pHost->pUnkForLOS, &origin, &dir, &out)) {
+			return out.fHitDistance > 2.5;
+		}
+		return false;
 	}
 	virtual UMath::Vector3* GetGroundNormal() {
 		static UMath::Vector3 normal;
