@@ -115,6 +115,7 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 		if (tire->bOnGround = pSuspension->IsWheelOnGround(i)) {
 			auto surface = &pEnvironment->aSurfaces[pSuspension->GetWheelRoadSurface(i)];
 			tire->pGroundSurface = &pCar->TireDynamics[surface->nDynamics];
+			pCar->nGroundSurfaces[i] = pSuspension->GetWheelRoadSurface(i);
 			//pCar->pPlayer->nTimeInAir = 0.0;
 			//pCar->pPlayer->fTimeInAirForBonus = 0.0;
 		}
@@ -125,7 +126,6 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	if (pCar == pPlayerHost->aPlayers[0]->pCar) {
 		pCar->pPlayer->pIngameHUD->fRPMFraction = pEngine->GetRPM() / 10000.0;
 		pCar->pPlayer->pIngameHUD->nGear = pEngine->GetGear();
-		//pCar->fRPM = pEngineRacer->GetRPM();
 		//pCar->mGearbox.nGear = pEngineRacer->GetGear();
 	}
 }
@@ -161,14 +161,42 @@ void __attribute__((naked)) __fastcall NoSlideControlASM() {
 auto EngineRPMSoundHooked_orig = (void(__stdcall*)(Car*, int))nullptr;
 void __stdcall EngineRPMSoundHooked(Car* a1, int a2) {
 	if (auto ply = GetPlayerInterface(a1)) {
+		auto engine = ply->Find<IEngine>();
 		auto bak = a1->fRPM;
-		a1->fRPM = ply->Find<IEngine>()->GetRPM();
+		a1->fRPM = engine->GetRPM();
 		EngineRPMSoundHooked_orig(a1, a2);
 		a1->fRPM = bak;
 	}
 	else {
 		EngineRPMSoundHooked_orig(a1, a2);
 	}
+}
+
+void ApplyMWPhysicsHooks() {
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B480, 0x42B494); // remove vanilla tire behavior
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42D650, 0x42EA38); // remove vanilla suspension behavior
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E5310, 0x4E536E); // remove hud rpm updater
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E548E, 0x4E54C0); // remove hud gear updater
+	NyaHookLib::Patch<uint8_t>(0x42FD60, 0xC3); // remove rubber walls and some tire stuff
+	NyaHookLib::Patch<uint8_t>(0x42AF43, 0xEB); // remove turbo and nos
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42D21C, 0x42D634); // remove tire forces
+
+	// disable slidecontrol stuff in the fouc code
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B6B6, 0x42BCF7);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42C02C, 0x42C26D);
+
+	// sub_42D1B0 also processes tires
+
+	// remove vanilla tire drive forces
+	//NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4554E0, 0x4556BB); // this also breaks angular velocity
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4554FE, 0x455578);
+
+	// remove tire velocity falloff
+	NyaHookLib::Fill(0x45559B, 0x90, 3);
+	NyaHookLib::Fill(0x4555CA, 0x90, 2);
+	NyaHookLib::Fill(0x4555D0, 0x90, 3);
+
+	EngineRPMSoundHooked_orig = (void(__stdcall*)(Car*, int))NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x480A17, &EngineRPMSoundHooked);
 }
 
 void SwitchToMWPhysics() {
@@ -195,14 +223,6 @@ void SwitchToMWPhysics() {
 		aSuspensions.push_back(susp);
 	}
 
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B480, 0x42B494); // remove vanilla tire behavior
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42D650, 0x42EA38); // remove vanilla suspension behavior
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E5310, 0x4E536E); // remove hud rpm updater
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E548E, 0x4E54C0); // remove hud gear updater
-	NyaHookLib::Patch<uint8_t>(0x42FD60, 0xC3); // remove rubber walls and some tire stuff
-	NyaHookLib::Patch<uint8_t>(0x42AF43, 0xEB); // remove turbo and nos
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42D21C, 0x42D634); // remove tire forces
-
 	NyaHookLib::Patch<uint64_t>(0x42B11C, 0x86D990909090D8DD); // downforce x
 	NyaHookLib::Patch<uint64_t>(0x42B132, 0x44D990909090D8DD); // downforce y
 	NyaHookLib::Patch<uint64_t>(0x42B144, 0x44D990909090D8DD); // downforce z
@@ -222,19 +242,6 @@ void SwitchToMWPhysics() {
 	// disable slidecontrol stuff in the fouc code
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B6B6, 0x42BCF7);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42C02C, 0x42C26D);
-
-	// sub_42D1B0 also processes tires
-
-	// remove vanilla tire drive forces
-	//NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4554E0, 0x4556BB); // this also breaks angular velocity
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4554FE, 0x455578);
-
-	// remove tire velocity falloff
-	NyaHookLib::Fill(0x45559B, 0x90, 3);
-	NyaHookLib::Fill(0x4555CA, 0x90, 2);
-	NyaHookLib::Fill(0x4555D0, 0x90, 3);
-
-	EngineRPMSoundHooked_orig = (void(__stdcall*)(Car*, int))NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x480A17, &EngineRPMSoundHooked);
 }
 
 void ValueEditorMenu(float& value) {
@@ -344,6 +351,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaFO2Hooks::aEndSceneFuncs.push_back(MainLoop);
 
 			ChloeMenuLib::RegisterMenu("MW Physics Debug Menu", &DebugMenu);
+
+			ApplyMWPhysicsHooks();
 
 			WriteLog("Mod initialized");
 		} break;
