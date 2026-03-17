@@ -41,7 +41,7 @@ You should be able to build the project now in CLion.
 - Switchblade - Lexus IS300 (Most Wanted)
 - Venom - Lexus IS300 (Most Wanted)
 - Bonecracker - Lexus IS300 (Most Wanted)
-- Grinder - Lexus IS300 (Most Wanted)
+- Grinder - Pontiac GTO (Most Wanted)
 - CTR - Fiat Punto (Most Wanted)
 - Boxer - Audi A3 (Most Wanted)
 - Mad Rash - Audi A4 (Most Wanted)

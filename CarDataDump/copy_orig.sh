@@ -18,8 +18,8 @@ cp orig_mw_full/is300.conf car_18.conf # Venom
 cp orig_mw_full/is300_top.conf car_18_top.conf # Venom
 cp orig_mw_full/is300.conf car_46.conf # Bonecracker
 cp orig_mw_full/is300_top.conf car_46_top.conf # Bonecracker
-cp orig_mw_full/is300.conf car_47.conf # Grinder
-cp orig_mw_full/is300_top.conf car_47_top.conf # Grinder
+cp orig_mw_full/gto.conf car_47.conf # Grinder
+cp orig_mw_full/gto_top.conf car_47_top.conf # Grinder
 cp orig_mw_full/punto.conf car_1.conf # CTR
 cp orig_mw_full/punto_top.conf car_1_top.conf # CTR
 cp orig_mw_full/a3.conf car_3.conf # Boxer
