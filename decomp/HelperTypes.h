@@ -415,3 +415,16 @@ namespace Sim {
 		return pPlayerHost->nRaceTime / 1000.0;
 	}
 }
+
+class SimSurface {
+public:
+	float LATERAL_GRIP = 1.0;
+	float DRIVE_GRIP = 1.0;
+	float ROLLING_RESISTANCE = 1.0;
+};
+
+SimSurface* GetSimSurface(int surfaceType) {
+	static SimSurface tmp;
+	tmp.LATERAL_GRIP = tmp.DRIVE_GRIP = tmp.ROLLING_RESISTANCE = UMath::Clamp(1.0f / pEnvironment->aSurfaces[surfaceType].fBodyFriction, 0.5f, 1.0f);
+	return &tmp;
+}

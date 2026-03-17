@@ -275,15 +275,3 @@ UMath::Matrix4 GetInverseWorldTensor(UMath::Vector3 inertiaTensor, UMath::Matrix
 	UMath::Mult(v9, v8, out);
 	return out;
 }
-
-class SimSurface {
-public:
-	float LATERAL_GRIP = 1.0;
-	float DRIVE_GRIP = 1.0;
-	float ROLLING_RESISTANCE = 1.0;
-};
-
-SimSurface* GetSimSurface(int surfaceType) {
-	static SimSurface tmp;
-	return &tmp;
-}
