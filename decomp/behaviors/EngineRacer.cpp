@@ -705,6 +705,7 @@ void EngineRacer::OnTaskSimulate(float dT) {
 	}
 
 	if (nLastRaceState > pGameFlow->nRaceState) {
+		ChargeNOS(1.0);
 		Reset();
 	}
 	nLastRaceState = pGameFlow->nRaceState;

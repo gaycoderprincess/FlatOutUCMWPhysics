@@ -404,6 +404,13 @@ void SuspensionRacerMW::CreateTires() {
 	//float fWheelY = -dimension.y;
 	float fWheelY = -0.05;
 
+	for (int i = 0; i < 4; i++) {
+		UMath::Vector3 v = pCar->aTires[i].GetMatrix()->p;
+		v.y = fWheelY;
+		GetWheel(i).SetLocalArm(v);
+	}
+
+	/*
 	UMath::Vector3 fl(-axle_width_f * 0.5f, fWheelY, front_axle);
 	UMath::Vector3 fr(axle_width_f * 0.5f, fWheelY, front_axle);
 	UMath::Vector3 rl(-axle_width_r * 0.5f, fWheelY, front_axle - wheelbase);
@@ -412,7 +419,7 @@ void SuspensionRacerMW::CreateTires() {
 	GetWheel(0).SetLocalArm(fl);
 	GetWheel(1).SetLocalArm(fr);
 	GetWheel(2).SetLocalArm(rl);
-	GetWheel(3).SetLocalArm(rr);
+	GetWheel(3).SetLocalArm(rr);*/
 }
 
 void SuspensionRacerMW::OnBehaviorChange() {

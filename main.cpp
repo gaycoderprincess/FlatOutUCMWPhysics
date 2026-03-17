@@ -50,7 +50,6 @@ CNyaTimer gGlobalTimer;
 #include "decomp/UMathExtras.h"
 #include "decomp/HelperTypes.h"
 
-
 #include "MWCarTuning.h"
 #include "decomp/interfaces/MWInterface.h"
 #include "decomp/interfaces/MWIChassis.h"
@@ -78,6 +77,8 @@ CNyaTimer gGlobalTimer;
 #include "decomp/behaviors/SuspensionRacer.cpp"
 #include "decomp/behaviors/EngineRacer.cpp"
 
+float fTireRadiusMult = 0.5;
+float fTireYOffset = 0.03;
 std::vector<EngineRacer*> aEngines;
 std::vector<SuspensionRacerMW*> aSuspensions;
 void __fastcall DoFO2Downforce(Car* pCar) {
@@ -100,12 +101,21 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	pSuspension->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 
 	for (int i = 0; i < 4; i++) {
-		pCar->aTires[i].pGroundSurface = nullptr;
-		if (pCar->aTires[i].bOnGround = pSuspension->IsWheelOnGround(i)) {
+		auto tire = &pCar->aTires[i];
+		//tire->GetMatrix()->p.y = pSuspension->GetWheelLocalPos(i)->y + pSuspension->GetWheelRadius(i);
+		tire->GetMatrix()->p.y = pSuspension->GetWheelLocalPos(i)->y + (tire->fRadius * fTireRadiusMult) + fTireYOffset;
+		float skid = 1.0 - pSuspension->GetWheelTraction(i);
+		tire->fTireSmokeX = 0; // todo
+		tire->fTireSmokeZ = skid * 100;
+		tire->fSkidSound1 = skid * 15;
+		tire->fSkidSound2 = skid * 50;
+		tire->fTurnSpeed = pSuspension->GetWheelAngularVelocity(i);
+		tire->pGroundSurface = nullptr;
+		if (tire->bOnGround = pSuspension->IsWheelOnGround(i)) {
 			auto surface = &pEnvironment->aSurfaces[pSuspension->GetWheelRoadSurface(i)];
-			pCar->aTires[i].pGroundSurface = &pCar->TireDynamics[surface->nDynamics];
-			pCar->pPlayer->nTimeInAir = 0.0;
-			pCar->pPlayer->fTimeInAirForBonus = 0.0;
+			tire->pGroundSurface = &pCar->TireDynamics[surface->nDynamics];
+			//pCar->pPlayer->nTimeInAir = 0.0;
+			//pCar->pPlayer->fTimeInAirForBonus = 0.0;
 		}
 	}
 
@@ -198,6 +208,17 @@ void SwitchToMWPhysics() {
 	// disable slidecontrol stuff in the fouc code
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B6B6, 0x42BCF7);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42C02C, 0x42C26D);
+
+	// sub_42D1B0 also processes tires
+
+	// remove vanilla tire drive forces
+	//NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4554E0, 0x4556BB); // this also breaks angular velocity
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4554FE, 0x455578);
+
+	// remove tire velocity falloff
+	NyaHookLib::Fill(0x45559B, 0x90, 3);
+	NyaHookLib::Fill(0x4555CA, 0x90, 2);
+	NyaHookLib::Fill(0x4555D0, 0x90, 3);
 }
 
 void ValueEditorMenu(float& value) {
@@ -242,6 +263,8 @@ void DebugMenu() {
 			ChloeMenuLib::BeginMenu();
 
 			QuickValueEditor("Mass", pPlayerHost->aPlayers[0]->pCar->fMass);
+			QuickValueEditor("fTireRadiusMult", fTireRadiusMult);
+			QuickValueEditor("fTireYOffset", fTireYOffset);
 
 			auto vGroundNormal = *aPlayerInterfaces[0].Find<ICollisionBody>()->GetGroundNormal();
 			DrawMenuOption(std::format("vGroundNormal {:.2f} {:.2f} {:.2f}", vGroundNormal.x, vGroundNormal.y, vGroundNormal.z));
@@ -293,7 +316,7 @@ void MainLoop() {
 	if (aEngines.empty() && aSuspensions.empty()) {
 		SwitchToMWPhysics();
 	}
-	NyaHookLib::Patch<uint8_t>(0x43D69E, 0xEB); // disable auto reset
+	//NyaHookLib::Patch<uint8_t>(0x43D69E, 0xEB); // disable auto reset
 }
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
