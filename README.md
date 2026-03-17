@@ -14,8 +14,6 @@ Massive thanks to everyone involved with [dbalatoni13's MW reverse engineering p
 
 - Cars sometimes spawn underground, restart the race to fix it
 - Reverse gear doesn't automatically engage
-- Skidmarks and tire smoke no longer work
-- Tires do not visually match at all
 
 ## Building
 

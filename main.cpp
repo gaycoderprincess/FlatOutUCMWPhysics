@@ -105,10 +105,11 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 		//tire->GetMatrix()->p.y = pSuspension->GetWheelLocalPos(i)->y + pSuspension->GetWheelRadius(i);
 		tire->GetMatrix()->p.y = pSuspension->GetWheelLocalPos(i)->y + (tire->fRadius * fTireRadiusMult) + fTireYOffset;
 		float skid = 1.0 - pSuspension->GetWheelTraction(i);
+		if (pSuspension->GetVehicle()->IsStaging()) skid = 0.0;
 		tire->fTireSmokeX = 0; // todo
 		tire->fTireSmokeZ = skid * 100;
-		tire->fSkidSound1 = skid * 15;
-		tire->fSkidSound2 = skid * 50;
+		tire->fSkidSound1 = skid * 15; // todo this doesn't work?
+		tire->fSkidSound2 = skid * 50; // todo this doesn't work?
 		tire->fTurnSpeed = pSuspension->GetWheelAngularVelocity(i);
 		tire->pGroundSurface = nullptr;
 		if (tire->bOnGround = pSuspension->IsWheelOnGround(i)) {
@@ -155,6 +156,19 @@ void __attribute__((naked)) __fastcall NoSlideControlASM() {
 			:
 			: "m" (NoSlideControlASM_jmp)
 	);
+}
+
+auto EngineRPMSoundHooked_orig = (void(__stdcall*)(Car*, int))nullptr;
+void __stdcall EngineRPMSoundHooked(Car* a1, int a2) {
+	if (auto ply = GetPlayerInterface(a1)) {
+		auto bak = a1->fRPM;
+		a1->fRPM = ply->Find<IEngine>()->GetRPM();
+		EngineRPMSoundHooked_orig(a1, a2);
+		a1->fRPM = bak;
+	}
+	else {
+		EngineRPMSoundHooked_orig(a1, a2);
+	}
 }
 
 void SwitchToMWPhysics() {
@@ -219,6 +233,8 @@ void SwitchToMWPhysics() {
 	NyaHookLib::Fill(0x45559B, 0x90, 3);
 	NyaHookLib::Fill(0x4555CA, 0x90, 2);
 	NyaHookLib::Fill(0x4555D0, 0x90, 3);
+
+	EngineRPMSoundHooked_orig = (void(__stdcall*)(Car*, int))NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x480A17, &EngineRPMSoundHooked);
 }
 
 void ValueEditorMenu(float& value) {
