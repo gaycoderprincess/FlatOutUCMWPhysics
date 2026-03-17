@@ -268,8 +268,8 @@ cp orig_mw_full/murcielago.conf car_345.conf # Judge2
 cp orig_mw_full/murcielago_top.conf car_345_top.conf # Judge2
 cp orig_mw_full/bmwm3gtre46.conf car_346.conf # PropCraneTruck
 cp orig_mw_full/bmwm3gtre46_top.conf car_346_top.conf # PropCraneTruck
-cp orig_mw_full/bmwm3gtre46.conf car_347.conf # DiabloSV
-cp orig_mw_full/bmwm3gtre46_top.conf car_347_top.conf # DiabloSV
+cp orig_mw_full/gallardo.conf car_347.conf # DiabloSV
+cp orig_mw_full/gallardo_top.conf car_347_top.conf # DiabloSV
 cp orig_mw_full/lancerevo8.conf car_348.conf # Evo5
 cp orig_mw_full/lancerevo8_top.conf car_348_top.conf # Evo5
 cp orig_mw_full/bmwm3gtre46.conf car_349.conf # Freeman
