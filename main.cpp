@@ -79,6 +79,58 @@ int GearPrintf(wchar_t* a1, size_t a2, const wchar_t* format, int) {
 	return _snwprintf(a1, a2, format, pEngineRacer->mGear);
 }
 
+void __fastcall DoFO2Downforce(Car* pCar) {
+	if (!pEngineRacer || !pSuspensionRacer) return;
+	if (pCar != pPlayerHost->aPlayers[0]->pCar) return;
+
+	gGlobalTimer.fDeltaTime = 0.01;
+	//gGlobalTimer.Process();
+	pEngineRacer->OnTaskSimulate(gGlobalTimer.fDeltaTime);
+	pSuspensionRacer->OnTaskSimulate(gGlobalTimer.fDeltaTime);
+
+	// todo this crashes the game in some nos gain function
+	//for (int i = 0; i < 4; i++) {
+	//	if (pCar->aTires[i].bOnGround = pSuspensionRacer->IsWheelOnGround(i)) {
+	//		pCar->pPlayer->nTimeInAir = 0.0;
+	//		pCar->pPlayer->fTimeInAirForBonus = 0.0;
+	//	}
+	//}
+
+	pCar->fNitro = pEngineRacer->GetNOSCapacity() * pCar->fMaxNitro;
+	pCar->pPlayer->pIngameHUD->fRPMFraction = pEngineRacer->GetRPM() / 10000.0;
+	pCar->pPlayer->pIngameHUD->nGear = pEngineRacer->GetGear();
+	//pCar->fRPM = pEngineRacer->GetRPM();
+	//pCar->mGearbox.nGear = pEngineRacer->GetGear();
+}
+
+uintptr_t FO2SlideControlWrappedASM_jmp = 0x42AFBF;
+void __attribute__((naked)) FO2DownforceASM() {
+	__asm__ (
+		"pushad\n\t"
+		"mov ecx, ebp\n\t"
+		"call %1\n\t"
+		"popad\n\t"
+		"fld dword ptr [ebp+0x290]\n\t"
+		"jmp %0\n\t"
+			:
+			: "m" (FO2SlideControlWrappedASM_jmp), "i" (DoFO2Downforce)
+	);
+}
+
+uintptr_t NoSlideControlASM_jmp = 0x42B4AE;
+void __attribute__((naked)) __fastcall NoSlideControlASM() {
+	__asm__ (
+		"push ebp\n\t"
+		"mov ebp, esp\n\t"
+		"and esp, 0xFFFFFFF8\n\t"
+		"sub esp, 0x98\n\t"
+		"fldz\n\t"
+		"jmp %0\n\t"
+			:
+			: "m" (NoSlideControlASM_jmp)
+	);
+}
+
 void SwitchToMWPhysics() {
 	if (pEngineRacer || pSuspensionRacer) return;
 
@@ -96,10 +148,27 @@ void SwitchToMWPhysics() {
 	pSuspensionRacer->OnBehaviorChange();
 
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B480, 0x42B494); // remove vanilla tire behavior
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42D650, 0x42EA38); // remove vanilla suspension behavior
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E5310, 0x4E536E); // remove hud rpm updater
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x4E548E, 0x4E54C0); // remove hud gear updater
 
 	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x4EAC99, &GearPrintf);
+
+	NyaHookLib::Patch<uint64_t>(0x42B11C, 0x86D990909090D8DD); // downforce x
+	NyaHookLib::Patch<uint64_t>(0x42B132, 0x44D990909090D8DD); // downforce y
+	NyaHookLib::Patch<uint64_t>(0x42B144, 0x44D990909090D8DD); // downforce z
+	NyaHookLib::Patch<uint64_t>(0x42B18D, 0x44D990909090D8DD); // downforce rx
+	NyaHookLib::Patch<uint64_t>(0x42B1B5, 0xCAD990909090D8DD); // downforce ry
+	NyaHookLib::Patch<uint64_t>(0x42B1D3, 0x1DD890909090D8DD); // downforce rz
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42AFB9, &FO2DownforceASM);
+
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x42F9CE, &NoSlideControlASM);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x480D2C, &NoSlideControlASM);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x51460E, &NoSlideControlASM);
+
+	// disable slidecontrol stuff in the fouc code
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B6B6, 0x42BCF7);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42C02C, 0x42C26D);
 }
 
 void ValueEditorMenu(float& value) {
@@ -167,65 +236,22 @@ void DebugMenu() {
 	ChloeMenuLib::EndMenu();
 }
 
-void __fastcall DoFO2Downforce(Car* pCar) {
-	if (!pEngineRacer || !pSuspensionRacer) return;
-	if (pCar != pPlayerHost->aPlayers[0]->pCar) return;
-
-	gGlobalTimer.fDeltaTime = 0.01;
-	//gGlobalTimer.Process();
-	pEngineRacer->OnTaskSimulate(gGlobalTimer.fDeltaTime);
-	pSuspensionRacer->OnTaskSimulate(gGlobalTimer.fDeltaTime);
-
-	pCar->pPlayer->pIngameHUD->fRPMFraction = pEngineRacer->GetRPM() / 10000.0;
-	pCar->pPlayer->pIngameHUD->nGear = pEngineRacer->GetGear();
-	//pCar->fRPM = pEngineRacer->GetRPM();
-	//pCar->mGearbox.nGear = pEngineRacer->GetGear();
-}
-
-uintptr_t FO2SlideControlWrappedASM_jmp = 0x42AFBF;
-void __attribute__((naked)) FO2DownforceASM() {
-	__asm__ (
-		"pushad\n\t"
-		"mov ecx, ebp\n\t"
-		"call %1\n\t"
-		"popad\n\t"
-		"fld dword ptr [ebp+0x290]\n\t"
-		"jmp %0\n\t"
-			:
-			: "m" (FO2SlideControlWrappedASM_jmp), "i" (DoFO2Downforce)
-	);
-}
-
-uintptr_t NoSlideControlASM_jmp = 0x42B4AE;
-void __attribute__((naked)) __fastcall NoSlideControlASM() {
-	__asm__ (
-		"push ebp\n\t"
-		"mov ebp, esp\n\t"
-		"and esp, 0xFFFFFFF8\n\t"
-		"sub esp, 0x98\n\t"
-		"fldz\n\t"
-		"jmp %0\n\t"
-			:
-			: "m" (NoSlideControlASM_jmp)
-	);
-}
-
 void MainLoop() {
-	NyaHookLib::Patch<uint64_t>(0x42B11C, 0x86D990909090D8DD); // downforce x
-	NyaHookLib::Patch<uint64_t>(0x42B132, 0x44D990909090D8DD); // downforce y
-	NyaHookLib::Patch<uint64_t>(0x42B144, 0x44D990909090D8DD); // downforce z
-	NyaHookLib::Patch<uint64_t>(0x42B18D, 0x44D990909090D8DD); // downforce rx
-	NyaHookLib::Patch<uint64_t>(0x42B1B5, 0xCAD990909090D8DD); // downforce ry
-	NyaHookLib::Patch<uint64_t>(0x42B1D3, 0x1DD890909090D8DD); // downforce rz
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42AFB9, &FO2DownforceASM);
+	if (pLoadingScreen || pGameFlow->nGameState != GAME_STATE_RACE) {
+		delete pEngineRacer;
+		delete pSuspensionRacer;
+		pEngineRacer = nullptr;
+		pSuspensionRacer = nullptr;
 
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x42F9CE, &NoSlideControlASM);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x480D2C, &NoSlideControlASM);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x51460E, &NoSlideControlASM);
+		// delete all other interfaces too
+		for (auto& ptr : gPlayerInterfaces.aInterfaces) {
+			delete ptr.pInterface;
+		}
+		gPlayerInterfaces.aInterfaces.clear();
+	}
 
-	// disable slidecontrol stuff in the fouc code
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42B6B6, 0x42BCF7);
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x42C02C, 0x42C26D);
+	if (!pEngineRacer || !pSuspensionRacer) return;
+	NyaHookLib::Patch<uint8_t>(0x43D69E, 0xEB); // disable auto reset
 }
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {

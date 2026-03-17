@@ -407,7 +407,7 @@ void SuspensionRacerMW::CreateTires() {
 	float front_axle = mMWAttributes->FRONT_AXLE;
 
 	//float fWheelY = -dimension.y;
-	float fWheelY = -0.15;
+	float fWheelY = -0.05;
 
 	UMath::Vector3 fl(-axle_width_f * 0.5f, fWheelY, front_axle);
 	UMath::Vector3 fr(axle_width_f * 0.5f, fWheelY, front_axle);

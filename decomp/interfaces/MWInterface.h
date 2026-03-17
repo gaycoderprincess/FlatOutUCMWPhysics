@@ -2,6 +2,8 @@ class MWInterfaceList;
 class IMWInterface {
 public:
 	MWInterfaceList* mCOMObject;
+
+	virtual ~IMWInterface() {}
 };
 
 class MWInterfaceList {

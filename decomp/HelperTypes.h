@@ -329,9 +329,14 @@ public:
 		auto dir = NyaVec3(0,-1,0);
 
 		tLineOfSightIn prop;
+		prop.bIgnoreBackfaces = false;
+		prop.bGetClosestHit = true;
 		prop.fMaxDistance = 10000;
 		tLineOfSightOut out;
 		if (CheckLineOfSight(&prop, pGameFlow->pHost->pUnkForLOS, &origin, &dir, &out)) {
+			if (out.vHitNormal.y < 0) {
+				out.vHitNormal *= -1;
+			}
 			dest->x = out.vHitNormal.x;
 			dest->y = out.vHitNormal.y;
 			dest->z = out.vHitNormal.z;
