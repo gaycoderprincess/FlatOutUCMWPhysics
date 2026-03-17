@@ -1,7 +1,16 @@
-void EngineRacer::Create(Car* car) {
+EngineRacer::EngineRacer(Car* car) {
 	ENGINERACER_FUNCTION_LOG("Create");
 
 	pCar = car;
+
+	gPlayerInterfaces.Add<IEngine>(this);
+	gPlayerInterfaces.Add<ITransmission>(this);
+	//gPlayerInterfaces.Add<IInductable>(this);
+	gPlayerInterfaces.Add<ITiptronic>(this);
+	gPlayerInterfaces.Add<IRaceEngine>(this);
+	gPlayerInterfaces.Add<IEngineDamage>(this);
+
+	OnBehaviorChange();
 
 	mDriveTorque = 0.0f;
 	mDriveTorqueAtEngine = 0.0f;
@@ -44,21 +53,27 @@ void EngineRacer::Create(Car* car) {
 	WriteLog("EngineRacer::Create finished");
 }
 
-void EngineRacer::dtor(char a2) {
+EngineRacer::~EngineRacer() {
 	ENGINERACER_FUNCTION_LOG("dtor");
 
-	delete mMWInfo;
+	gPlayerInterfaces.Remove<IEngine>(this);
+	gPlayerInterfaces.Remove<ITransmission>(this);
+	//gPlayerInterfaces.Remove<IInductable>(this);
+	gPlayerInterfaces.Remove<ITiptronic>(this);
+	gPlayerInterfaces.Remove<IRaceEngine>(this);
+	gPlayerInterfaces.Remove<IEngineDamage>(this);
 
-	// todo
-	//if ((a2 & 1) != 0) {
-	//	WriteLog("gFastMem.Free");
-	//	gFastMem.Free(this, sizeof(EngineRacer), nullptr);
-	//}
+	delete mMWInfo;
 
 	WriteLog("EngineRacer::dtor finished");
 }
 
-float EngineRacer::GetHorsePower() const {
+void EngineRacer::OnBehaviorChange() {
+	gPlayerInterfaces.QueryInterface(&mIInput);
+	gPlayerInterfaces.QueryInterface(&mSuspension);
+}
+
+float EngineRacer::GetHorsePower() {
 	float engine_torque = GetEngineTorque(mRPM);
 	return NM2HP(engine_torque * mThrottle, mRPM);
 }
@@ -104,7 +119,7 @@ void EngineRacer::Reset() {
 	CalcShiftPoints();
 }
 
-float EngineRacer::GetEngineTorque(float rpm) const {
+float EngineRacer::GetEngineTorque(float rpm) {
 	float ftlbs = Physics::Info::Torque(mMWInfo, rpm);
 	float result = FTLB2NM(ftlbs);
 	result *= 1.0f + mInductionBoost;
@@ -116,7 +131,7 @@ float EngineRacer::GetEngineTorque(float rpm) const {
 	return result;
 }
 
-GearID EngineRacer::GuessGear(float speed) const {
+GearID EngineRacer::GuessGear(float speed) {
 	if (speed < 0.0f) {
 		return G_REVERSE;
 	}
@@ -137,7 +152,7 @@ GearID EngineRacer::GuessGear(float speed) const {
 	return result;
 }
 
-float EngineRacer::GuessRPM(float speed, GearID atgear) const {
+float EngineRacer::GuessRPM(float speed, GearID atgear) {
 	float wheelrear = Physics::Info::WheelDiameter(mMWInfo, false) * 0.5f;
 	float wheelfront = Physics::Info::WheelDiameter(mMWInfo, true) * 0.5f;
 	float avg_wheel_radius = (wheelrear + wheelfront) * 0.5f;
@@ -169,7 +184,7 @@ void EngineRacer::MatchSpeed(float speed) {
 }
 
 // Credits: Brawltendo
-float EngineRacer::GetBrakingTorque(float engine_torque, float rpm) const {
+float EngineRacer::GetBrakingTorque(float engine_torque, float rpm) {
 	float torque = engine_torque;
 	unsigned int numpts = mMWInfo->ENGINE_BRAKING.size();
 	if (numpts > 1) {
@@ -245,7 +260,7 @@ static const bool Tweak_CoastShifting = true;
 static const float Tweak_CoastingPercent = 0.65f;
 
 // Credits: Brawltendo
-ShiftPotential EngineRacer::FindShiftPotential(GearID gear, float rpm, float rpmFromGround) const {
+ShiftPotential EngineRacer::FindShiftPotential(GearID gear, float rpm, float rpmFromGround) {
 	if (gear <= G_NEUTRAL)
 		return SHIFT_POTENTIAL_NONE;
 
@@ -342,7 +357,7 @@ bool EngineRacer::DoGearChange(GearID gear, bool automatic) {
 }
 
 // Credits: Brawltendo
-float EngineRacer::GetDifferentialAngularVelocity(bool locked) const {
+float EngineRacer::GetDifferentialAngularVelocity(bool locked) {
 	float into_gearbox = 0.0f;
 	bool in_reverse = GetGear() == G_REVERSE;
 
@@ -370,7 +385,7 @@ float EngineRacer::GetDifferentialAngularVelocity(bool locked) const {
 }
 
 // Credits: Brawltendo
-float EngineRacer::GetDriveWheelSlippage() const {
+float EngineRacer::GetDriveWheelSlippage() {
 	float retval = 0.0f;
 	int drivewheels = 0;
 	if (RearWheelDrive()) {
@@ -420,13 +435,13 @@ void EngineRacer::SetDifferentialAngularVelocity(float w) {
 }
 
 // Credits: Brawltendo
-float EngineRacer::CalcSpeedometer(float rpm, unsigned int gear) const {
+float EngineRacer::CalcSpeedometer(float rpm, unsigned int gear) {
 	const Physics::Tunings *tunings = GetVehicleTunings();
 	return Physics::Info::Speedometer(mMWInfo, rpm, (GearID)gear, tunings);
 }
 
 // Credits: Brawltendo
-float EngineRacer::GetMaxSpeedometer() const {
+float EngineRacer::GetMaxSpeedometer() {
 	unsigned int num_ratios = GetNumGearRatios();
 	if (num_ratios > 0) {
 		float limiter = MPH2MPS(mMWInfo->SPEED_LIMITER[0]);
@@ -442,7 +457,7 @@ float EngineRacer::GetMaxSpeedometer() const {
 }
 
 // Credits: Brawltendo
-float EngineRacer::GetSpeedometer() const {
+float EngineRacer::GetSpeedometer() {
 	return CalcSpeedometer(RPS2RPM(mTransmissionVelocity), mGear);
 }
 
@@ -913,7 +928,7 @@ void EngineRacer::OnTaskSimulate(float dT) {
 }
 
 // Credits: Brawltendo
-float EngineRacer::GetShiftPoint(GearID from_gear, GearID to_gear) const {
+float EngineRacer::GetShiftPoint(GearID from_gear, GearID to_gear) {
 	if (from_gear <= G_REVERSE) {
 		return 0.0f;
 	}

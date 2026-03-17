@@ -1,9 +1,9 @@
-void ChassisMW::Destroy(char a2) {
+void ChassisMW::Destroy() {
 	CHASSIS_FUNCTION_LOG("Destroy");
 
-	delete mMWAttributes;
+	gPlayerInterfaces.Remove<IChassis>(this);
 
-	//dtor_simobject(this); // todo frees the interface list
+	delete mMWAttributes;
 
 	WriteLog("SuspensionRacer::Destroy finished");
 }
@@ -13,6 +13,8 @@ void ChassisMW::Create(Car* car) {
 
 	mChassisType = "Chassis";
 
+	gPlayerInterfaces.Add<IChassis>(this);
+
 	mJumpTime = 0.0f;
 	mJumpAlititude = 0.0f;
 	mTireHeat = 0.0f;
@@ -21,6 +23,16 @@ void ChassisMW::Create(Car* car) {
 
 	mMWAttributes = new MWCarTuning;
 	GetLerpedCarTuning(*mMWAttributes, GetVehicle()->GetVehicleName());
+}
+
+void ChassisMW::OnBehaviorChange() {
+	gPlayerInterfaces.QueryInterface(&mRBComplex);
+	gPlayerInterfaces.QueryInterface(&mRB);
+	gPlayerInterfaces.QueryInterface(&mInput);
+	gPlayerInterfaces.QueryInterface(&mEngine);
+	gPlayerInterfaces.QueryInterface(&mTransmission);
+	gPlayerInterfaces.QueryInterface(&mEngineDamage);
+	//gPlayerInterfaces.QueryInterface(&mSpikeDamage);
 }
 
 Meters ChassisMW::GuessCompression(unsigned int id, Newtons downforce) {
@@ -44,8 +56,8 @@ Meters ChassisMW::GetRideHeight(unsigned int idx) {
 
 float ChassisMW::CalculateUndersteerFactor() {
 	float magnitude = 0.0f;
-	float slip_avg = (GetIChassis()->GetWheelSkid(0) + GetIChassis()->GetWheelSkid(1)) / 2.0f;
-	float steer = (GetIChassis()->GetWheelSteer(0) + GetIChassis()->GetWheelSteer(1)) / 2.0f;
+	float slip_avg = (GetWheelSkid(0) + GetWheelSkid(1)) / 2.0f;
+	float steer = (GetWheelSteer(0) + GetWheelSteer(1)) / 2.0f;
 	float speed = mRB->GetSpeed();
 	if ((GetVehicle()->GetSpeed() > 0.0f) && (speed > 1.0f) && (steer * slip_avg < 0.0f)) {
 		magnitude = UMath::Abs(slip_avg) / speed;
@@ -63,8 +75,8 @@ Mps ChassisMW::ComputeMaxSlip(const ChassisMW::State &state) {
 
 void ChassisMW::DoTireHeat(const ChassisMW::State &state) {
 	if (state.flags & 1) {
-		for (unsigned int i = 0; i < GetIChassis()->GetNumWheels(); ++i) {
-			if (GetIChassis()->GetWheelSlip(i) > 0.5f) {
+		for (unsigned int i = 0; i < GetNumWheels(); ++i) {
+			if (GetWheelSlip(i) > 0.5f) {
 				this->mTireHeat += state.time / 3.0f;
 				this->mTireHeat = UMath::Min(this->mTireHeat, 1.0f);
 				return;
@@ -82,7 +94,7 @@ float ChassisMW::CalculateOversteerFactor() {
 	float speed = mRB->GetSpeed();
 	float magnitude = 0.0f;
 	if ((GetVehicle()->GetSpeed() > 0.0f) && (speed > 1.0f)) {
-		magnitude = UMath::Abs((GetIChassis()->GetWheelSkid(3) + GetIChassis()->GetWheelSkid(2)) * 0.5f) / speed;
+		magnitude = UMath::Abs((GetWheelSkid(3) + GetWheelSkid(2)) * 0.5f) / speed;
 	}
 	return UMath::Min(magnitude, 1.0f);
 }
@@ -132,15 +144,15 @@ ChassisMW::SleepState ChassisMW::DoSleep(const ChassisMW::State &state) {
 		return SS_NONE;
 	}
 	if (state.speed < 0.5f) {
-		if ((GetIChassis()->GetNumWheelsOnGround() == GetIChassis()->GetNumWheels()) && (state.brake_input + state.ebrake_input > 0.0f) && (state.gas_input == 0.0f)) {
+		if ((GetNumWheelsOnGround() == GetNumWheels()) && (state.brake_input + state.ebrake_input > 0.0f) && (state.gas_input == 0.0f)) {
 			if ((UMath::Length(state.angular_vel) < 0.25f) && (!mRBComplex->HasHadCollision())) {
 				if (state.speed < FLOAT_EPSILON) {
 					mRBComplex->Damp(1.0f);
 				} else {
 					mRBComplex->Damp(1.0f - state.speed);
 				}
-				for (unsigned int i = 0; i < GetIChassis()->GetNumWheels(); ++i) {
-					GetIChassis()->SetWheelAngularVelocity(i, 0.0f);
+				for (unsigned int i = 0; i < GetNumWheels(); ++i) {
+					SetWheelAngularVelocity(i, 0.0f);
 				}
 				return SS_ALL;
 			}
@@ -233,7 +245,7 @@ void ChassisMW::SetCOG(float extra_bias, float extra_ride) {
 	mRB->GetDimension(&dim);
 
 	float fwbias = (mMWAttributes->FRONT_WEIGHT_BIAS + extra_bias) * 0.01f;
-	if (GetIChassis()->GetNumWheelsOnGround() == 0) {
+	if (GetNumWheelsOnGround() == 0) {
 		fwbias = 0.5f;
 	}
 	float cg_z = (front_z - rear_z) * fwbias + rear_z;
@@ -272,7 +284,7 @@ void ChassisMW::ComputeState(float dT, ChassisMW::State &state) {
 	state.steer_input = UMath::Clamp(mInput->GetControlSteering(), -1.0f, 1.0f);
 
 	state.cog = *mRBComplex->GetCenterOfGravity();
-	state.ground_effect = GetIChassis()->GetNumWheelsOnGround() * 0.25f;
+	state.ground_effect = GetNumWheelsOnGround() * 0.25f;
 	state.mass = mRB->GetMass();
 	state.driver_style = GetVehicle()->GetDriverStyle();
 	state.driver_class = GetVehicle()->GetDriverClass();
@@ -421,7 +433,7 @@ void ChassisMW::DoJumpStabilizer(const ChassisMW::State &state) {
 		return;
 	}
 
-	int nTouching = GetIChassis()->GetNumWheelsOnGround();
+	int nTouching = GetNumWheelsOnGround();
 	bool resolve = false;
 	UMath::Vector4 ground_normal = *mRBComplex->GetGroundNormal();
 	float altitude = -ground_normal.w;

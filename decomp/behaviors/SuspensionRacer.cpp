@@ -1,7 +1,9 @@
-void SuspensionRacerMW::Create(Car* car) {
+SuspensionRacerMW::SuspensionRacerMW(Car* car) {
 	SUSPENSIONRACER_FUNCTION_LOG("Create");
 
 	ChassisMW::Create(car);
+
+	OnBehaviorChange();
 
 	mChassisType = "SuspensionRacer";
 
@@ -16,11 +18,9 @@ void SuspensionRacerMW::Create(Car* car) {
 		mTires[i] = NULL;
 	}
 	CreateTires();
-
-	pSuspension = this;
 }
 
-void SuspensionRacerMW::Destroy(char a2) {
+SuspensionRacerMW::~SuspensionRacerMW() {
 	SUSPENSIONRACER_FUNCTION_LOG("Destroy");
 
 	for (int i = 0; i < 4; ++i) {
@@ -30,12 +30,12 @@ void SuspensionRacerMW::Destroy(char a2) {
 
 	WriteLog("SuspensionRacerMW::Destroy finished");
 
-	ChassisMW::Destroy(a2);
+	ChassisMW::Destroy();
+}
 
-	//if ((a2 & 1) != 0) {
-	//	WriteLog("gFastMem.Free");
-	//	gFastMem.Free(this, sizeof(SuspensionRacerMW), nullptr);
-	//}
+void SuspensionRacerMW::OnBehaviorChange() {
+	ChassisMW::OnBehaviorChange();
+	gPlayerInterfaces.QueryInterface(&mHumanAI);
 }
 
 const float ZeroDegreeTable[6] = {0.0f};

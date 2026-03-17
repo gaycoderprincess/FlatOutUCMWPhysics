@@ -295,7 +295,7 @@ namespace Physics {
 	}
 }
 
-class EngineRacer {
+class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, public ITiptronic, public ITransmission {
   public:
 	struct Clutch {
 	  public:
@@ -362,42 +362,43 @@ class EngineRacer {
 		bool mShiftingUp;
 	};
 
-	IVehicle* GetVehicle() const {
-		return nullptr;
+	IVehicle* GetVehicle() {
+		return gPlayerInterfaces.Find<IVehicle>();
 	}
 
-	void Create(Car* car);
-	GearID GuessGear(float speed) const;
-	float GuessRPM(float speed, GearID atgear) const;
-	ShiftPotential FindShiftPotential(GearID gear, float rpm, float rpmFromGround) const;
-	float GetDifferentialAngularVelocity(bool locked) const;
-	float GetDriveWheelSlippage() const;
+	EngineRacer(Car* car);
+	void OnBehaviorChange();
+	GearID GuessGear(float speed);
+	float GuessRPM(float speed, GearID atgear);
+	ShiftPotential FindShiftPotential(GearID gear, float rpm, float rpmFromGround);
+	float GetDifferentialAngularVelocity(bool locked);
+	float GetDriveWheelSlippage();
 	void SetDifferentialAngularVelocity(float w);
-	float CalcSpeedometer(float rpm, unsigned int gear) const;
+	float CalcSpeedometer(float rpm, unsigned int gear);
 	void LimitFreeWheels(float w);
-	float GetBrakingTorque(float engine_torque, float rpm) const;
+	float GetBrakingTorque(float engine_torque, float rpm);
 	void CalcShiftPoints();
 	bool DoGearChange(GearID gear, bool automatic);
 	void AutoShift(float dT);
 
-	Physics::Tunings* GetVehicleTunings() const {
+	Physics::Tunings* GetVehicleTunings() {
 		return GetVehicleMWTunings(GetVehicle());
 	}
 
-	void dtor(char a2);
+	~EngineRacer();
 
 	// IEngine
 	void MatchSpeed(float speed);
-	float GetHorsePower() const;
+	float GetHorsePower();
 
 	// Behavior
 	void Reset();
 	void OnTaskSimulate(float dT);
 
 	// ITransmission
-	float GetSpeedometer() const;
-	float GetMaxSpeedometer() const;
-	float GetShiftPoint(GearID from_gear, GearID to_gear) const;
+	float GetSpeedometer();
+	float GetMaxSpeedometer();
+	float GetShiftPoint(GearID from_gear, GearID to_gear);
 
 	// ITiptronic
 	bool SportShift(GearID gear);
@@ -408,53 +409,53 @@ class EngineRacer {
 
 	// IRaceEngine
 	// Credits: Brawltendo
-	float GetPerfectLaunchRange(float &range) {
+	float GetPerfectLaunchRange(float *range) {
 		// perfect launch only applies to first gear
 		if (mGear != G_FIRST) {
-			range = 0.0f;
+			*range = 0.0f;
 			return 0.0f;
 		} else {
-			range = (mMWInfo->RED_LINE - mMWInfo->IDLE) * 0.25f;
+			*range = (mMWInfo->RED_LINE - mMWInfo->IDLE) * 0.25f;
 			float upper_limit = mMWInfo->RED_LINE + 500.0f;
-			return UMath::Min(mPeakTorqueRPM + range, upper_limit) - range;
+			return UMath::Min(mPeakTorqueRPM + *range, upper_limit) - *range;
 		}
 	}
 
 	// IEngine
-	float GetMaxHorsePower() const {
+	float GetMaxHorsePower() {
 		return mMaxHP;
 	}
-	Hp GetMinHorsePower() const {
+	Hp GetMinHorsePower() {
 		return FTLB2HP(Physics::Info::Torque(mMWInfo, mMWInfo->IDLE) * mMWInfo->IDLE, 1.0f);
 	}
-	float GetRPM() const {
+	float GetRPM() {
 		return mRPM;
 	}
-	float GetMaxRPM() const {
+	float GetMaxRPM() {
 		return mMWInfo->MAX_RPM;
 	}
-	float GetPeakTorqueRPM() const {
+	float GetPeakTorqueRPM() {
 		return mPeakTorqueRPM;
 	}
-	float GetRedline() const {
+	float GetRedline() {
 		return mMWInfo->RED_LINE;
 	}
-	float GetMinRPM() const {
+	float GetMinRPM() {
 		return mMWInfo->IDLE;
 	}
-	float GetNOSCapacity() const {
+	float GetNOSCapacity() {
 		return mNOSCapacity;
 	}
-	float GetNOSBoost() const {
+	float GetNOSBoost() {
 		return mNOSBoost;
 	}
-	bool IsNOSEngaged() const {
+	bool IsNOSEngaged() {
 		return mNOSEngaged >= 1.0f;
 	}
-	bool HasNOS() const {
+	bool HasNOS() {
 		return mMWInfo->NOS_CAPACITY > 0.0f && mMWInfo->TORQUE_BOOST > 0.0f;
 	}
-	float GetNOSFlowRate() const {
+	float GetNOSFlowRate() {
 		return mMWInfo->FLOW_RATE;
 	}
 
@@ -470,62 +471,62 @@ class EngineRacer {
 	bool IsShiftingGear() {
 		return mGearShiftTimer > 0.0f;
 	}
-	bool IsReversing() const {
+	bool IsReversing() {
 		return mGear == G_REVERSE;
 	}
 
 	// IInductable
-	Physics::Info::eInductionType InductionType() const {
+	Physics::Info::eInductionType InductionType() {
 		return Physics::Info::InductionType(mMWInfo);
 	}
-	float GetInductionPSI() const {
+	float GetInductionPSI() {
 		return mPSI;
 	}
-	float InductionSpool() const {
+	float InductionSpool() {
 		return mSpool;
 	}
-	float GetMaxInductionPSI() const {
+	float GetMaxInductionPSI() {
 		return mMWInfo->PSI;
 	}
 
 	// IEngineDamage
-	bool IsBlown() const {
+	bool IsBlown() {
 		return mBlown;
 	}
 	void Repair() {
 		mSabotage = 0.0f;
 		mBlown = false;
 	}
-	bool IsSabotaged() const {
+	bool IsSabotaged() {
 		return mSabotage > 0.0f;
 	}
 
 	// ITransmission
-	float GetDriveTorque() const {
+	float GetDriveTorque() {
 		return mDriveTorque;
 	}
-	GearID GetTopGear() const {
+	GearID GetTopGear() {
 		return (GearID)(GetNumGearRatios() - 1);
 	}
-	GearID GetGear() const {
+	GearID GetGear() {
 		return (GearID)mGear;
 	}
-	bool IsGearChanging() const {
+	bool IsGearChanging() {
 		return mGearShiftTimer > 0.0f;
 	}
 
 	bool Shift(GearID gear) {
 		return DoGearChange(gear, false);
 	}
-	ShiftStatus GetShiftStatus() const {
+	ShiftStatus GetShiftStatus() {
 		return mShiftStatus;
 	}
-	ShiftPotential GetShiftPotential() const {
+	ShiftPotential GetShiftPotential() {
 		return mShiftPotential;
 	}
 
 	ShiftStatus OnGearChange(GearID gear);
-	bool UseRevLimiter() const {
+	bool UseRevLimiter() {
 		return bRevLimiter;
 	}
 	void DoECU();
@@ -534,26 +535,26 @@ class EngineRacer {
 	float DoNos(const Physics::Tunings *tunings, float dT, bool engaged);
 	void DoShifting(float dT);
 	ShiftPotential UpdateShiftPotential(GearID gear, float rpm, float rpmFromGround);
-	float GetEngineTorque(float rpm) const;
+	float GetEngineTorque(float rpm);
 
 	// Inlines
-	unsigned int GetNumGearRatios() const {
+	unsigned int GetNumGearRatios() {
 		return mMWInfo->GEAR_RATIO.size();
 	}
 
-	float GetGearRatio(unsigned int idx) const {
+	float GetGearRatio(unsigned int idx) {
 		return mMWInfo->GEAR_RATIO[idx];
 	}
 
-	float GetGearEfficiency(unsigned int idx) const {
+	float GetGearEfficiency(unsigned int idx) {
 		return mMWInfo->GEAR_EFFICIENCY[idx];
 	}
 
-	float GetFinalGear() const {
+	float GetFinalGear() {
 		return mMWInfo->FINAL_GEAR;
 	}
 
-	float GetRatioChange(unsigned int from, unsigned int to) const {
+	float GetRatioChange(unsigned int from, unsigned int to) {
 		float ratio1 = mMWInfo->GEAR_RATIO[from];
 		float ratio2 = mMWInfo->GEAR_RATIO[to];
 
@@ -564,27 +565,27 @@ class EngineRacer {
 		}
 	}
 
-	float GetShiftDelay(unsigned int gear, bool shiftUp) const {
+	float GetShiftDelay(unsigned int gear, bool shiftUp) {
 		return mMWInfo->SHIFT_SPEED * GetGearRatio(gear);
 	}
 
-	bool RearWheelDrive() const {
+	bool RearWheelDrive() {
 		return mMWInfo->TORQUE_SPLIT < 1.0f;
 	}
 
-	bool FrontWheelDrive() const {
+	bool FrontWheelDrive() {
 		return mMWInfo->TORQUE_SPLIT > 0.0f;
 	}
 
-	float GetShiftUpRPM(int gear) const {
+	float GetShiftUpRPM(int gear) {
 		return mShiftUpRPM[gear];
 	}
 
-	float GetShiftDownRPM(int gear) const {
+	float GetShiftDownRPM(int gear) {
 		return mShiftDownRPM[gear];
 	}
 
-	float GetCatchupCheat() const {
+	float GetCatchupCheat() {
 		// todo
 		return 0.0;
 	}
@@ -623,4 +624,3 @@ class EngineRacer {
 	IChassis* mSuspension;
 	IInput* mIInput;
 };
-EngineRacer* pEngine = nullptr;

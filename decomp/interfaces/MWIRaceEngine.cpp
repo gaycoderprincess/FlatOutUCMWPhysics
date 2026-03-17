@@ -1,17 +1,6 @@
-namespace MWIRaceEngine {
-	EngineRacer* GetEngineRacer(uintptr_t ptr) {
-		ptr -= offsetof(EngineRacer, tmpRaceEngine);
-		return (EngineRacer*)ptr;
-	}
+class IRaceEngine : public IMWInterface {
+public:
+	static inline uint32_t _IIDName = 0x668390;
 
-	float __thiscall GetPerfectLaunchRange(uintptr_t ptr, float* range) {
-		IRACEENGINE_FUNCTION_LOG("GetPerfectLaunchRange");
-		auto pThis = GetEngineRacer(ptr);
-		return pThis->GetPerfectLaunchRange(*range);
-	}
-
-	void* NewVTable[] = {
-			(void*)0xDEADBEEF, // dtor
-			(void*)&GetPerfectLaunchRange,
-	};
-}
+	virtual float GetPerfectLaunchRange(float* range) = 0;
+};
