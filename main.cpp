@@ -85,7 +85,7 @@ void OverrideTimescale(float f) {
 #include "decomp/behaviors/EngineRacer.cpp"
 
 void DoGameBreaker(float real_time_delta, IPlayer* player) {
-	player->DoGameBreaker(real_time_delta / fOverrideTimescale, real_time_delta);
+	player->DoGameBreaker(real_time_delta * fOverrideTimescale, real_time_delta);
 
 	float speed = 1.0;
 	float target = 1.0;
@@ -146,15 +146,6 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	}
 	if (!pEngine || !pSuspension) return;
 
-	if (auto pPlayer = GetPlayerInterface(pCar)->GetPlayer()) {
-		//if (IsKeyJustPressed('X') || IsPadKeyJustPressed(NYA_PAD_KEY_X)) {
-		if (IsKeyJustPressed('X')) {
-			pPlayer->ToggleGameBreaker();
-		}
-		// when 0.5x speed, fDeltaTime is 0.01 but it's actually running every 0.005
-		DoGameBreaker(gGlobalTimer.fDeltaTime * fOverrideTimescale, pPlayer);
-		RefreshInputs();
-	}
 	DoReversing(pCar, pEngine);
 	OverrideTimescale(fOverrideTimescale);
 
@@ -333,6 +324,8 @@ void QuickValueEditor(const char* name, float& value) {
 void DebugMenu() {
 	ChloeMenuLib::BeginMenu();
 
+	DrawMenuOption(std::format("Race State {}", pGameFlow->nRaceState));
+
 	if (DrawMenuOption("SwitchToMWPhysics")) {
 		SwitchToMWPhysics();
 	}
@@ -382,6 +375,9 @@ void DebugMenu() {
 }
 
 void MainLoop() {
+	CNyaTimer gRealTimer;
+	gRealTimer.Process();
+
 	if (pLoadingScreen || pGameFlow->nGameState != GAME_STATE_RACE) {
 		fOverrideTimescale = 1.0;
 		OverrideTimescale(1.0);
@@ -409,7 +405,20 @@ void MainLoop() {
 	if (aEngines.empty() && aSuspensions.empty()) {
 		SwitchToMWPhysics();
 	}
-	OverrideTimescale(fOverrideTimescale);
+
+	if (pGameFlow->nIsPauseMenuUp) {
+		OverrideTimescale(1.0);
+	}
+	else {
+		if (auto pPlayer = GetPlayerInterface(pPlayerHost->aPlayers[0]->pCar)->GetPlayer()) {
+			if (IsKeyJustPressed('X') || IsPadKeyJustPressed(NYA_PAD_KEY_DPAD_DOWN, -1)) {
+				pPlayer->ToggleGameBreaker();
+			}
+			DoGameBreaker(gRealTimer.fDeltaTime, pPlayer);
+			RefreshInputs();
+		}
+		OverrideTimescale(fOverrideTimescale);
+	}
 }
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
