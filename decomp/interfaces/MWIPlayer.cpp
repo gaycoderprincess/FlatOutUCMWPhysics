@@ -19,6 +19,9 @@ public:
 		if (pGameFlow->nRaceState != RACE_STATE_RACING || !mCOMObject->QueryInterface(&ivehicle)) {
 			return false;
 		}
+		if (pCar->nIsRagdolled) {
+			return false;
+		}
 		float speed_mph = MPS2MPH(ivehicle->GetSpeedometer());
 		if (speed_mph < 30.0f) {
 			return false;

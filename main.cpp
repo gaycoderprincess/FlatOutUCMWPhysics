@@ -84,8 +84,31 @@ void OverrideTimescale(float f) {
 #include "decomp/behaviors/SuspensionRacer.cpp"
 #include "decomp/behaviors/EngineRacer.cpp"
 
+float fPlayerOriginalFudge = 1.0f;
+float fPlayerOriginalGlobalFudge = 0.0f;
+float fPlayerOriginalGlobalFudgeArcadeRace = 0.0f;
+float fPlayerOriginalGlobalFudgeFragDerby = 0.0f;
+float Tweak_GameBreakerCollisionMass = 2.0;
 void DoGameBreaker(float real_time_delta, IPlayer* player) {
 	player->DoGameBreaker(real_time_delta * fOverrideTimescale, real_time_delta);
+
+	// set player mass fudge factor
+	static float fFudge = 1.0;
+	if (player->InGameBreaker()) {
+		fFudge = 1.0 / (fPlayerOriginalFudge * Tweak_GameBreakerCollisionMass);
+		*(float*)0x849434 = fPlayerOriginalGlobalFudge * Tweak_GameBreakerCollisionMass;
+		*(float*)0x849454 = fPlayerOriginalGlobalFudgeArcadeRace * Tweak_GameBreakerCollisionMass;
+		*(float*)0x84945C = fPlayerOriginalGlobalFudgeFragDerby * Tweak_GameBreakerCollisionMass;
+	}
+	else {
+		fFudge = 1.0 / fPlayerOriginalFudge;
+		*(float*)0x849434 = fPlayerOriginalGlobalFudge;
+		*(float*)0x849454 = fPlayerOriginalGlobalFudgeArcadeRace;
+		*(float*)0x84945C = fPlayerOriginalGlobalFudgeFragDerby;
+	}
+	NyaHookLib::Patch<uint16_t>(0x480ABD, 0x9090);
+	NyaHookLib::Patch<uint8_t>(0x480AC5, 0xEB);
+	NyaHookLib::Patch(0x480ACF + 2, &fFudge);
 
 	float speed = 1.0;
 	float target = 1.0;
@@ -253,6 +276,14 @@ void ApplyMWPhysicsHooks() {
 
 void SwitchToMWPhysics() {
 	if (!aEngines.empty() || !aSuspensions.empty()) return;
+
+	fPlayerOriginalFudge = *(float*)(0x480ACF + 2);
+	fPlayerOriginalFudge = 1.0 / fPlayerOriginalFudge;
+	if (fPlayerOriginalGlobalFudge == 0.0f) {
+		fPlayerOriginalGlobalFudge = *(float*)0x849434;
+		fPlayerOriginalGlobalFudgeArcadeRace = *(float*)0x849454;
+		fPlayerOriginalGlobalFudgeFragDerby = *(float*)0x84945C;
+	}
 
 	for (int i = 0; i < pPlayerHost->GetNumPlayers(); i++) {
 		auto ply = pPlayerHost->aPlayers[i]->pCar;
