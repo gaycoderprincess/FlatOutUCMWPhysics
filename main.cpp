@@ -173,6 +173,7 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	DoReversing(pCar, pEngine);
 	OverrideTimescale(fOverrideTimescale);
 
+	pEngine->GetVehicle()->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pEngine->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pSuspension->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 
