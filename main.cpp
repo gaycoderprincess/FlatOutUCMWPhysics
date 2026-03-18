@@ -42,9 +42,16 @@ void WriteLog(const std::string& str) {
 
 #include "nya_commontimer.cpp"
 
+#include "inputs.h"
+
 bool bRevLimiter = true;
 float fUpgradeLevel = 1.0;
 CNyaTimer gGlobalTimer;
+
+float fOverrideTimescale = 1.0;
+void OverrideTimescale(float f) {
+	NyaHookLib::Patch<int>(0x5A6071, f * 1000);
+}
 
 #include "decomp/ConversionUtil.hpp"
 #include "decomp/UMathExtras.h"
@@ -77,6 +84,46 @@ CNyaTimer gGlobalTimer;
 #include "decomp/behaviors/SuspensionRacer.cpp"
 #include "decomp/behaviors/EngineRacer.cpp"
 
+void DoGameBreaker(float real_time_delta, IPlayer* player) {
+	player->DoGameBreaker(real_time_delta / fOverrideTimescale, real_time_delta);
+
+	float speed = 1.0;
+	float target = 1.0;
+	if (player->InGameBreaker()) {
+		target = 0.25;
+		speed = 2.0;
+	}
+	else {
+		target = 1.0;
+		speed = 0.5;
+	}
+
+	if (target == fOverrideTimescale) return;
+
+	auto modify = speed * real_time_delta;
+	if (fOverrideTimescale < target) {
+		fOverrideTimescale += modify;
+		if (fOverrideTimescale > target) fOverrideTimescale = target;
+	}
+	else if (fOverrideTimescale > target) {
+		fOverrideTimescale -= modify;
+		if (fOverrideTimescale > target) fOverrideTimescale = target;
+	}
+}
+
+void DoReversing(Car* car, ITransmission* transmission) {
+	if (pGameFlow->nRaceState <= RACE_STATE_COUNTDOWN) return;
+
+	bool gameReversing = car->mGearbox.nGear == -1;
+	if (transmission->IsReversing() && !gameReversing) {
+		transmission->Shift(G_FIRST);
+	} else {
+		if (!transmission->IsReversing() && gameReversing) {
+			transmission->Shift(G_REVERSE);
+		}
+	}
+}
+
 float fTireRadiusMult = 0.5;
 float fTireYOffset = 0.03;
 std::vector<EngineRacer*> aEngines;
@@ -97,6 +144,20 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 		if (susp->pCar != pCar) continue;
 		pSuspension = susp;
 	}
+	if (!pEngine || !pSuspension) return;
+
+	if (auto pPlayer = GetPlayerInterface(pCar)->GetPlayer()) {
+		//if (IsKeyJustPressed('X') || IsPadKeyJustPressed(NYA_PAD_KEY_X)) {
+		if (IsKeyJustPressed('X')) {
+			pPlayer->ToggleGameBreaker();
+		}
+		// when 0.5x speed, fDeltaTime is 0.01 but it's actually running every 0.005
+		DoGameBreaker(gGlobalTimer.fDeltaTime * fOverrideTimescale, pPlayer);
+		RefreshInputs();
+	}
+	DoReversing(pCar, pEngine);
+	OverrideTimescale(fOverrideTimescale);
+
 	pEngine->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pSuspension->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 
@@ -205,6 +266,10 @@ void SwitchToMWPhysics() {
 	for (int i = 0; i < pPlayerHost->GetNumPlayers(); i++) {
 		auto ply = pPlayerHost->aPlayers[i]->pCar;
 
+		auto start = pEnvironment->aStartpoints[(ply->pPlayer->nStartPosition%pEnvironment->nNumStartpoints)-1];
+		*ply->GetMatrix() = *(NyaMat4x4*)start.fMatrix;
+		ply->GetMatrix()->p = *(NyaVec3*)start.fPosition;
+
 		aPlayerInterfaces[i].aInterfaces.clear();
 		aPlayerInterfaces[i].pCar = ply;
 		aPlayerInterfaces[i].Add(new IVehicle(ply));
@@ -212,6 +277,7 @@ void SwitchToMWPhysics() {
 		aPlayerInterfaces[i].Add(new ICollisionBody(ply));
 		aPlayerInterfaces[i].Add(new IInput(ply));
 		if (i == 0) {
+			aPlayerInterfaces[i].Add(new IPlayer(ply));
 			aPlayerInterfaces[i].Add(new IHumanAI());
 		}
 
@@ -286,6 +352,7 @@ void DebugMenu() {
 			ChloeMenuLib::BeginMenu();
 
 			QuickValueEditor("Mass", pPlayerHost->aPlayers[0]->pCar->fMass);
+			DrawMenuOption(std::format("nGear {}", pPlayerHost->aPlayers[0]->pCar->mGearbox.nGear));
 			QuickValueEditor("fTireRadiusMult", fTireRadiusMult);
 			QuickValueEditor("fTireYOffset", fTireYOffset);
 
@@ -316,6 +383,9 @@ void DebugMenu() {
 
 void MainLoop() {
 	if (pLoadingScreen || pGameFlow->nGameState != GAME_STATE_RACE) {
+		fOverrideTimescale = 1.0;
+		OverrideTimescale(1.0);
+
 		for (auto& susp : aEngines) {
 			delete susp;
 		}
@@ -339,7 +409,7 @@ void MainLoop() {
 	if (aEngines.empty() && aSuspensions.empty()) {
 		SwitchToMWPhysics();
 	}
-	//NyaHookLib::Patch<uint8_t>(0x43D69E, 0xEB); // disable auto reset
+	OverrideTimescale(fOverrideTimescale);
 }
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {

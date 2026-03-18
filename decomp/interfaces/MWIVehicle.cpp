@@ -15,6 +15,7 @@ public:
 	}
 	virtual int GetDriverStyle() { return STYLE_RACING; }
 	virtual int GetDriverClass() { return DRIVER_HUMAN; }
+	virtual float GetSpeedometer() { return mCOMObject->Find<ITransmission>()->GetSpeedometer(); }
 	virtual float GetSpeed() { // this is so weird and useless
 		UMath::Vector3 vel = *pCar->GetVelocity();
 		ConvertWorldToLocal(pCar, vel, false);
