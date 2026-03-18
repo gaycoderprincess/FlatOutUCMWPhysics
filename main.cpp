@@ -294,7 +294,7 @@ void SwitchToMWPhysics() {
 		auto start = pEnvironment->aStartpoints[((ply->pPlayer->nStartPosition-1)%pEnvironment->nNumStartpoints)];
 		*ply->GetMatrix() = *(NyaMat4x4*)start.fMatrix;
 		ply->GetMatrix()->p = *(NyaVec3*)start.fPosition;
-		ply->GetMatrix()->p.y += 0.5;
+		ply->GetMatrix()->p.y += 0.33;
 
 		aPlayerInterfaces[i].aInterfaces.clear();
 		aPlayerInterfaces[i].pCar = ply;

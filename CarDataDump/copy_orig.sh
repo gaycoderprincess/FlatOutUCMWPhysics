@@ -76,6 +76,8 @@ cp orig_mw_full/copsport.conf car_41.conf # Flatmobile
 cp orig_mw_full/copsport.conf car_41_top.conf # Flatmobile
 cp orig_mw_full/clk500.conf car_42.conf # MobCar
 cp orig_mw_full/clk500_top.conf car_42_top.conf # MobCar
+cp orig_mw_full/copsport.conf car_37.conf # Rocket
+cp orig_mw_full/copsport.conf car_37_top.conf # Rocket
 cp orig_mw_full/cts.conf car_43.conf # SchoolBus
 cp orig_mw_full/cts_top.conf car_43_top.conf # SchoolBus
 cp orig_mw_full/cts.conf car_45.conf # Truck
