@@ -70,8 +70,8 @@ cp orig_mw_full/mustanggt.conf car_25.conf # RoadKing
 cp orig_mw_full/mustanggt_top.conf car_25_top.conf # RoadKing
 cp orig_mw_full/carreragt.conf car_29.conf # BulletGT
 cp orig_mw_full/carreragt_top.conf car_29_top.conf # BulletGT
-cp orig_mw_full/is300.conf car_40.conf # Pimpster
-cp orig_mw_full/is300_top.conf car_40_top.conf # Pimpster
+cp orig_cb_full/roadrunner.conf car_40.conf # Pimpster
+cp orig_cb_full/roadrunner_top.conf car_40_top.conf # Pimpster
 cp orig_mw_full/copsport.conf car_41.conf # Flatmobile
 cp orig_mw_full/copsport.conf car_41_top.conf # Flatmobile
 cp orig_mw_full/clk500.conf car_42.conf # MobCar
