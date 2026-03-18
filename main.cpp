@@ -45,6 +45,7 @@ void WriteLog(const std::string& str) {
 #include "inputs.h"
 
 bool bRevLimiter = true;
+bool bSpeedbreakerEnabled = true;
 float fUpgradeLevel = 1.0;
 CNyaTimer gGlobalTimer;
 
@@ -437,18 +438,20 @@ void MainLoop() {
 		SwitchToMWPhysics();
 	}
 
-	if (pGameFlow->nIsPauseMenuUp) {
-		OverrideTimescale(1.0);
-	}
-	else {
-		if (auto pPlayer = GetPlayerInterface(pPlayerHost->aPlayers[0]->pCar)->GetPlayer()) {
-			if (IsKeyJustPressed('X') || IsPadKeyJustPressed(NYA_PAD_KEY_DPAD_DOWN, -1)) {
-				pPlayer->ToggleGameBreaker();
-			}
-			DoGameBreaker(gRealTimer.fDeltaTime, pPlayer);
-			RefreshInputs();
+	if (bSpeedbreakerEnabled) {
+		if (pGameFlow->nIsPauseMenuUp) {
+			OverrideTimescale(1.0);
 		}
-		OverrideTimescale(fOverrideTimescale);
+		else {
+			if (auto pPlayer = GetPlayerInterface(pPlayerHost->aPlayers[0]->pCar)->GetPlayer()) {
+				if (IsKeyJustPressed('X') || IsPadKeyJustPressed(NYA_PAD_KEY_R3, -1)) {
+					pPlayer->ToggleGameBreaker();
+				}
+				DoGameBreaker(gRealTimer.fDeltaTime, pPlayer);
+				RefreshInputs();
+			}
+			OverrideTimescale(fOverrideTimescale);
+		}
 	}
 }
 
@@ -461,6 +464,12 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaFO2Hooks::aEndSceneFuncs.push_back(MainLoop);
 
 			ChloeMenuLib::RegisterMenu("MW Physics Debug Menu", &DebugMenu);
+
+			if (std::filesystem::exists("FlatOutUCMWPhysics_gcp.toml")) {
+				auto config = toml::parse_file("FlatOutUCMWPhysics_gcp.toml");
+				bSpeedbreakerEnabled = config["speedbreaker"].value_or(bSpeedbreakerEnabled);
+				bRevLimiter = config["rev_limiter"].value_or(bRevLimiter);
+			}
 
 			ApplyMWPhysicsHooks();
 

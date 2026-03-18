@@ -1,0 +1,2 @@
+speedbreaker = true			# enables speedbreaker (toggle with X on the keyboard or R3 on the controller)
+rev_limiter = true			# enables the rev limiter, set to false to have higher RPMs

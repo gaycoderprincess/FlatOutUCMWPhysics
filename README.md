@@ -12,8 +12,7 @@ Massive thanks to everyone involved with [dbalatoni13's MW reverse engineering p
 
 ## Known issues
 
-- Cars sometimes spawn underground, restart the race to fix it
-- Reverse gear doesn't automatically engage
+- Upgrades don't affect your car in career mode
 
 ## Building
 
@@ -35,10 +34,10 @@ You should be able to build the project now in CLion.
 - Shaker - Pontiac GTO (Carbon)
 - Blaster XL - Cadillac CTS (Most Wanted)
 - Banger - Renault Clio (Most Wanted)
-- Splitter - Lexus IS300 (Most Wanted)
-- Switchblade - Lexus IS300 (Most Wanted)
-- Venom - Lexus IS300 (Most Wanted)
-- Bonecracker - Lexus IS300 (Most Wanted)
+- Splitter - Mercedes-Benz SL 500 (Most Wanted)
+- Switchblade - Audi A4 (Most Wanted)
+- Venom - Pontiac GTO (Most Wanted)
+- Bonecracker - Audi A4 (Most Wanted)
 - Grinder - Pontiac GTO (Most Wanted)
 - CTR - Fiat Punto (Most Wanted)
 - Boxer - Audi A3 (Most Wanted)
