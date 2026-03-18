@@ -2,6 +2,7 @@
 #include <format>
 #include <toml++/toml.hpp>
 
+#include "nya_dx9_hookbase.h"
 #include "nya_commonhooklib.h"
 #include "nya_commonmath.h"
 #include "fo2versioncheck.h"
@@ -40,9 +41,7 @@ void WriteLog(const std::string& str) {
 
 #define GET_FAKE_INTERFACE(base, type, var) { auto ptr = (uintptr_t)this; ptr += offsetof(base, var); return (type*)ptr; }
 
-#include "nya_commontimer.cpp"
-
-#include "inputs.h"
+#include "d3dhook.h"
 
 bool bRevLimiter = true;
 bool bSpeedbreakerEnabled = true;
@@ -96,13 +95,13 @@ void DoGameBreaker(float real_time_delta, IPlayer* player) {
 	// set player mass fudge factor
 	static float fFudge = 1.0;
 	if (player->InGameBreaker()) {
-		fFudge = 1.0 / (fPlayerOriginalFudge * Tweak_GameBreakerCollisionMass);
+		fFudge = fPlayerOriginalFudge / Tweak_GameBreakerCollisionMass;
 		*(float*)0x849434 = fPlayerOriginalGlobalFudge * Tweak_GameBreakerCollisionMass;
 		*(float*)0x849454 = fPlayerOriginalGlobalFudgeArcadeRace * Tweak_GameBreakerCollisionMass;
 		*(float*)0x84945C = fPlayerOriginalGlobalFudgeFragDerby * Tweak_GameBreakerCollisionMass;
 	}
 	else {
-		fFudge = 1.0 / fPlayerOriginalFudge;
+		fFudge = fPlayerOriginalFudge;
 		*(float*)0x849434 = fPlayerOriginalGlobalFudge;
 		*(float*)0x849454 = fPlayerOriginalGlobalFudgeArcadeRace;
 		*(float*)0x84945C = fPlayerOriginalGlobalFudgeFragDerby;
@@ -173,7 +172,8 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	DoReversing(pCar, pEngine);
 	OverrideTimescale(fOverrideTimescale);
 
-	pEngine->GetVehicle()->OnTaskSimulate(gGlobalTimer.fDeltaTime);
+	auto ivehicle = pEngine->GetVehicle();
+	ivehicle->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pEngine->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pSuspension->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 
@@ -182,7 +182,7 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 		//tire->GetMatrix()->p.y = pSuspension->GetWheelLocalPos(i)->y + pSuspension->GetWheelRadius(i);
 		tire->GetMatrix()->p.y = pSuspension->GetWheelLocalPos(i)->y + (tire->fRadius * fTireRadiusMult) + fTireYOffset;
 		float skid = 1.0 - pSuspension->GetWheelTraction(i);
-		if (pSuspension->GetVehicle()->IsStaging()) skid = 0.0;
+		if (ivehicle->IsStaging()) skid = 0.0;
 		tire->fTireSmokeX = 0; // todo
 		tire->fTireSmokeZ = skid * 100;
 		tire->fSkidSound1 = skid * 15; // todo this doesn't work?
@@ -279,8 +279,9 @@ void ApplyMWPhysicsHooks() {
 void SwitchToMWPhysics() {
 	if (!aEngines.empty() || !aSuspensions.empty()) return;
 
-	fPlayerOriginalFudge = *(float*)(0x480ACF + 2);
-	fPlayerOriginalFudge = 1.0 / fPlayerOriginalFudge;
+	if (**(float**)(0x480ACF + 2) != fPlayerOriginalFudge) {
+		fPlayerOriginalFudge = **(float**)(0x480ACF + 2);
+	}
 	if (fPlayerOriginalGlobalFudge == 0.0f) {
 		fPlayerOriginalGlobalFudge = *(float*)0x849434;
 		fPlayerOriginalGlobalFudgeArcadeRace = *(float*)0x849454;
@@ -290,9 +291,10 @@ void SwitchToMWPhysics() {
 	for (int i = 0; i < pPlayerHost->GetNumPlayers(); i++) {
 		auto ply = pPlayerHost->aPlayers[i]->pCar;
 
-		auto start = pEnvironment->aStartpoints[(ply->pPlayer->nStartPosition%pEnvironment->nNumStartpoints)-1];
+		auto start = pEnvironment->aStartpoints[((ply->pPlayer->nStartPosition-1)%pEnvironment->nNumStartpoints)];
 		*ply->GetMatrix() = *(NyaMat4x4*)start.fMatrix;
 		ply->GetMatrix()->p = *(NyaVec3*)start.fPosition;
+		ply->GetMatrix()->p.y += 0.5;
 
 		aPlayerInterfaces[i].aInterfaces.clear();
 		aPlayerInterfaces[i].pCar = ply;
@@ -449,10 +451,23 @@ void MainLoop() {
 					pPlayer->ToggleGameBreaker();
 				}
 				DoGameBreaker(gRealTimer.fDeltaTime, pPlayer);
-				RefreshInputs();
 			}
 			OverrideTimescale(fOverrideTimescale);
 		}
+	}
+
+	float perfectLaunchPopupTimer = aEngines[0]->GetVehicle()->mPerfectLaunch.Time - 3.0; // 1.5 seconds
+	if (perfectLaunchPopupTimer > 0 && !pGameFlow->nIsPauseMenuUp) {
+		tNyaStringData data;
+		data.x = 0.5;
+		data.y = 0.3;
+		data.size = 0.04;
+		data.XCenterAlign = true;
+		data.outlinea = 255;
+		if (perfectLaunchPopupTimer < 0.5) {
+			data.a = data.outlinea = perfectLaunchPopupTimer * 2 * 255;
+		}
+		DrawString(data, "PERFECT LAUNCH!", &DrawStringFO2);
 	}
 }
 
@@ -462,7 +477,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			DoFlatOutVersionCheck(FO2Version::FOUC_GFWL);
 
 			NyaFO2Hooks::PlaceD3DHooks();
-			NyaFO2Hooks::aEndSceneFuncs.push_back(MainLoop);
+			NyaFO2Hooks::aD3DResetFuncs.push_back(OnD3DReset);
+			NyaFO2Hooks::aEndSceneFuncs.push_back(D3DHookMain);
 
 			ChloeMenuLib::RegisterMenu("MW Physics Debug Menu", &DebugMenu);
 

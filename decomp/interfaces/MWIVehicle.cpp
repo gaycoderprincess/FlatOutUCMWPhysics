@@ -23,7 +23,7 @@ public:
 	}
 	virtual float GetAbsoluteSpeed() { return pCar->GetVelocity()->length(); }
 	virtual bool IsStaging() { return pGameFlow->nRaceState <= RACE_STATE_COUNTDOWN; }
-	virtual float GetPerfectLaunch() { return 0.0; }
+	virtual float GetPerfectLaunch() { return mPerfectLaunch.Time > 0.0 ? mPerfectLaunch.Amount : 0.0; }
 	virtual bool IsDestroyed() { return pCar->nIsWrecked; }
 
 	struct LaunchState {
@@ -32,8 +32,7 @@ public:
 	} mPerfectLaunch;
 
 	virtual void DoStaging() {
-		if (mPerfectLaunch.Time > 0.0) return;
-
+		mPerfectLaunch.Time = 0.0;
 		mPerfectLaunch.Amount = 0.0;
 
 		auto engine = mCOMObject->Find<IEngine>();
@@ -41,13 +40,12 @@ public:
 		auto raceEngine = mCOMObject->Find<IRaceEngine>();
 		if (!raceEngine) return;
 
-		float launchRange = 0.0;
-		auto v6 = raceEngine->GetPerfectLaunchRange(&launchRange);
-		if (launchRange > 0.0 && v6 > 0.0) {
-			auto v8 = engine->GetRPM();
-			auto v9 = v8 - v6;
-			if (v9 < launchRange && v9 > 0.0) {
-				mPerfectLaunch.Amount = (((v8 - v6) / launchRange) + 1.0) * 0.5;
+		float range = 0.0;
+		auto peak_rpm = raceEngine->GetPerfectLaunchRange(&range);
+		if (range > 0.0 && peak_rpm > 0.0) {
+			auto dist = engine->GetRPM() - peak_rpm;
+			if (dist < range && dist > 0.0) {
+				mPerfectLaunch.Amount = ((dist / range) + 1.0) * 0.5;
 			}
 		}
 	}
@@ -86,7 +84,7 @@ public:
 						mPerfectLaunch.Time = 0.0;
 					}
 				}
-				if (GetSpeed() > 26.8218) {
+				if (GetSpeed() > MPH2MPS(60)) {
 					mPerfectLaunch.Time = 0.0;
 					mPerfectLaunch.Amount = 0.0;
 				}
