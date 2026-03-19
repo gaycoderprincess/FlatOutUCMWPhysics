@@ -31,23 +31,30 @@ public:
 		float Amount = 0;
 	} mPerfectLaunch;
 
-	virtual void DoStaging() {
-		mPerfectLaunch.Time = 0.0;
-		mPerfectLaunch.Amount = 0.0;
-
+	virtual float CalculatePerfectLaunch() {
 		auto engine = mCOMObject->Find<IEngine>();
-		if (!engine) return;
+		if (!engine) return 0.0;
 		auto raceEngine = mCOMObject->Find<IRaceEngine>();
-		if (!raceEngine) return;
+		if (!raceEngine) return 0.0;
 
 		float range = 0.0;
 		auto peak_rpm = raceEngine->GetPerfectLaunchRange(&range);
 		if (range > 0.0 && peak_rpm > 0.0) {
 			auto dist = engine->GetRPM() - peak_rpm;
 			if (dist < range && dist > 0.0) {
-				mPerfectLaunch.Amount = ((dist / range) + 1.0) * 0.5;
+				return ((dist / range) + 1.0) * 0.5;
 			}
 		}
+		return 0.0;
+	}
+
+	virtual bool IsInPerfectLaunchRange() {
+		return CalculatePerfectLaunch() > 0.0;
+	}
+
+	virtual void DoStaging() {
+		mPerfectLaunch.Time = 0.0;
+		mPerfectLaunch.Amount = CalculatePerfectLaunch();
 	}
 
 	virtual void Launch() {

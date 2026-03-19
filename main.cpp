@@ -456,7 +456,13 @@ void MainLoop() {
 		}
 	}
 
-	float perfectLaunchPopupTimer = aEngines[0]->GetVehicle()->mPerfectLaunch.Time - 3.0; // 1.5 seconds
+	auto ivehicle = aEngines[0]->GetVehicle();
+
+	static double speedoAlpha = 255.0;
+	speedoAlpha = ivehicle->IsStaging() && ivehicle->IsInPerfectLaunchRange() ? 127.0 : 255.0;
+	NyaHookLib::Patch(0x4D9E93 + 2, &speedoAlpha);
+
+	float perfectLaunchPopupTimer = ivehicle->mPerfectLaunch.Time - 3.0; // 1.5 seconds
 	if (perfectLaunchPopupTimer > 0 && !pGameFlow->nIsPauseMenuUp) {
 		tNyaStringData data;
 		data.x = 0.5;
