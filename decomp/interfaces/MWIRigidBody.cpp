@@ -14,6 +14,7 @@ public:
 	}
 	virtual void GetMatrix4(UMath::Matrix4* out) {
 		*out = *pCar->GetMatrix();
+		out->p = {0,0,0}; // todo is this correct?
 	}
 	virtual UMath::Vector3* GetPosition() {
 		return (UMath::Vector3*)&pCar->GetMatrix()->p;
