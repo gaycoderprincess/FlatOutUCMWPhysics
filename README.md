@@ -10,8 +10,20 @@ Massive thanks to everyone involved with [dbalatoni13's MW reverse engineering p
 - Plop the files into your game folder.
 - Enjoy, nya~ :3
 
+## Features
+
+- Full 1:1 port of Most Wanted's engine, gearbox, suspension and tire physics as well as the aerodynamics such as drag and air stabilization
+- The mod is based on actual code rather than tweaks of random values, ensuring the handling is as accurate as possible
+- Perfect starts have been added, the speedometer needle turns transparent if you're within the perfect launch range
+- Speedbreaker has been added, bound to the X key on the keyboard and R3 on an Xbox controller
+
+## Useful info
+
+- FOR DEVELOPERS: Almost all DB values have been replaced! For editing car handling, edit the files in `CarDataDump` instead, except for car mass
+
 ## Known issues
 
+- Manual transmission doesn't work yet
 - Upgrades don't affect your car in career mode
 
 ## Building
