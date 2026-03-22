@@ -147,6 +147,10 @@ void DoReversing(Car* car, ITransmission* transmission) {
 	}
 }
 
+auto GetPlayerStartPosition(Car* pCar) {
+	return &pEnvironment->aStartpoints[((pCar->pPlayer->nStartPosition-1)%pEnvironment->nNumStartpoints)];
+}
+
 float fTireRadiusMult = 0.5;
 float fTireYOffset = 0.03;
 std::vector<EngineRacer*> aEngines;
@@ -173,6 +177,17 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	OverrideTimescale(fOverrideTimescale);
 
 	auto ivehicle = pEngine->GetVehicle();
+
+	// hack to fix start positions
+	if (ivehicle->IsStaging()) {
+		auto start = GetPlayerStartPosition(pCar);
+		pCar->GetMatrix()->p.x = start->fPosition[0];
+		pCar->GetMatrix()->p.z = start->fPosition[2];
+
+		pCar->GetVelocity()->x = 0.0;
+		pCar->GetVelocity()->z = 0.0;
+	}
+
 	ivehicle->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pEngine->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pSuspension->OnTaskSimulate(gGlobalTimer.fDeltaTime);
@@ -291,9 +306,9 @@ void SwitchToMWPhysics() {
 	for (int i = 0; i < pPlayerHost->GetNumPlayers(); i++) {
 		auto ply = pPlayerHost->aPlayers[i]->pCar;
 
-		auto start = pEnvironment->aStartpoints[((ply->pPlayer->nStartPosition-1)%pEnvironment->nNumStartpoints)];
-		*ply->GetMatrix() = *(NyaMat4x4*)start.fMatrix;
-		ply->GetMatrix()->p = *(NyaVec3*)start.fPosition;
+		auto start = GetPlayerStartPosition(ply);
+		*ply->GetMatrix() = *(NyaMat4x4*)start->fMatrix;
+		ply->GetMatrix()->p = *(NyaVec3*)start->fPosition;
 		ply->GetMatrix()->p.y += 0.33;
 
 		aPlayerInterfaces[i].aInterfaces.clear();
