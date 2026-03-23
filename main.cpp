@@ -134,10 +134,12 @@ void DoGameBreaker(float real_time_delta, IPlayer* player) {
 	}
 }
 
-void DoReversing(Car* car, ITransmission* transmission) {
+void DoReversing(Car* pCar) {
 	if (pGameFlow->nRaceState <= RACE_STATE_COUNTDOWN) return;
 
-	bool gameReversing = car->mGearbox.nGear == -1;
+	auto transmission = GetPlayerInterface(pCar)->Find<ITransmission>();
+
+	bool gameReversing = pCar->mGearbox.nGear == -1;
 	if (transmission->IsReversing() && !gameReversing) {
 		transmission->Shift(G_FIRST);
 	} else {
@@ -145,6 +147,56 @@ void DoReversing(Car* car, ITransmission* transmission) {
 			transmission->Shift(G_REVERSE);
 		}
 	}
+}
+
+void DoShifting(Car* pCar) {
+	auto iinput = GetPlayerInterface(pCar)->Find<IInput>();
+	auto transmission = GetPlayerInterface(pCar)->Find<ITransmission>();
+	auto tiptronic = GetPlayerInterface(pCar)->Find<ITiptronic>();
+	if (!GetPlayerInterface(pCar)->Find<IHumanAI>()) return; // ai uses automatic shift
+
+	auto currentUp = pCar->pPlayer->pController->GetInputValue(INPUT_GEAR_UP);
+	auto currentDown = pCar->pPlayer->pController->GetInputValue(INPUT_GEAR_DOWN);
+	if (pCar->pPlayer->pController->_4[-1] == 0x6F403C) { // xinput controller vtable
+		currentDown = IsPadKeyPressed(NYA_PAD_KEY_LB);
+		currentUp = IsPadKeyPressed(NYA_PAD_KEY_RB);
+	}
+
+	static bool bLastUp = false;
+	if (currentUp && !bLastUp && transmission->GetGear() != transmission->GetTopGear()) {
+		auto nextGear = transmission->GetGear()+1;
+		if (iinput->IsAutomaticShift()) {
+			if (nextGear == G_NEUTRAL) nextGear = G_FIRST;
+			if (nextGear == G_FIRST) {
+				transmission->Shift((GearID)nextGear);
+			}
+			else {
+				tiptronic->SportShift((GearID)nextGear);
+			}
+		}
+		else {
+			transmission->Shift((GearID)nextGear);
+		}
+	}
+	bLastUp = currentUp;
+
+	static bool bLastDown = false;
+	if (currentDown && !bLastDown && transmission->GetGear() != G_REVERSE) {
+		auto nextGear = transmission->GetGear()-1;
+		if (iinput->IsAutomaticShift()) {
+			if (nextGear == G_NEUTRAL) nextGear = G_REVERSE;
+			if (nextGear == G_REVERSE) {
+				transmission->Shift((GearID)nextGear);
+			}
+			else {
+				tiptronic->SportShift((GearID)nextGear);
+			}
+		}
+		else {
+			transmission->Shift((GearID)nextGear);
+		}
+	}
+	bLastDown = currentDown;
 }
 
 auto GetPlayerStartPosition(Car* pCar) {
@@ -173,7 +225,10 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	}
 	if (!pEngine || !pSuspension) return;
 
-	DoReversing(pCar, pEngine);
+	if (pCar->pPlayer->nAutoTransmission) {
+		DoReversing(pCar);
+	}
+	DoShifting(pCar);
 	OverrideTimescale(fOverrideTimescale);
 
 	auto ivehicle = pEngine->GetVehicle();
@@ -198,7 +253,7 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 		tire->GetMatrix()->p.y = pSuspension->GetWheelLocalPos(i)->y + (tire->fRadius * fTireRadiusMult) + fTireYOffset;
 		float skid = 1.0 - pSuspension->GetWheelTraction(i);
 		if (ivehicle->IsStaging()) skid = 0.0;
-		tire->fTireSmokeX = 0; // todo
+		tire->fTireSmokeX = pSuspension->mTires[i]->GetLateralSpeed();
 		tire->fTireSmokeZ = skid * 100;
 		tire->fSkidSound1 = skid * 15; // todo this doesn't work?
 		tire->fSkidSound2 = skid * 50; // todo this doesn't work?

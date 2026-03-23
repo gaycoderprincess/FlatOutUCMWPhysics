@@ -25,5 +25,5 @@ public:
 		}
 	}
 	virtual bool GetControlNOS() { return pCar->fNitroButton > 0.0; }
-	virtual bool IsAutomaticShift() { return true; }
+	virtual bool IsAutomaticShift() { return pCar->pPlayer->nAutoTransmission; }
 };
