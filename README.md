@@ -21,6 +21,7 @@ I have recently discovered that the latter project uses AI, so while this mod wa
 ## Useful info
 
 - FOR DEVELOPERS: Almost all DB values have been replaced! For editing car handling, edit the files in `CarDataDump` instead, except for car mass
+- Manual transmission no longer gives you an advantage
 
 ## Known issues
 
