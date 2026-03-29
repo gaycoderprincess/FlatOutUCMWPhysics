@@ -426,6 +426,6 @@ public:
 SimSurface* GetSimSurface(int surfaceType) {
 	static SimSurface tmp;
 	tmp.LATERAL_GRIP = tmp.DRIVE_GRIP = UMath::Clamp(1.0f / pEnvironment->aSurfaces[surfaceType].fBodyFriction, 0.5f, 1.0f);
-	tmp.ROLLING_RESISTANCE = (1.0 / tmp.DRIVE_GRIP) * 2;
+	tmp.ROLLING_RESISTANCE = 1.0 + (((1.0 / tmp.DRIVE_GRIP) - 1.0) * 3);
 	return &tmp;
 }
