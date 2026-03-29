@@ -220,11 +220,12 @@ UMath::Vector3 GetWheelBaseXZ(Car* car, int wheel) {
 	return car->aTires[GetMWWheelID(wheel)].GetMatrix()->p;
 }
 
-// wheels in fouc are always centered at y 0, so it should be 0 + radius
+// wheels in fouc are always centered at y 0 offset by center of mass, so it should be 0 + radius
 float GetWheelBaseY(MWCarTuning* tuning, Car* car, int wheel) {
 	float y = 0.0;
 	y -= car->aTires[GetMWWheelID(wheel)].fRadius * 0.5;
 	y -= car->aTires[GetMWWheelID(wheel)].fRadius * 0.1;
+	y -= car->vCenterOfMass[1];
 	y += INCH2METERS(tuning->RIDE_HEIGHT.At(wheel / 2u));
 	y += fTireYPhysOffset;
 	return y;

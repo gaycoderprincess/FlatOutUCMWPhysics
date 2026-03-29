@@ -196,8 +196,8 @@ cp orig_mw_full/bmwm3gtre46.conf car_303.conf # PropFO1Trasher
 cp orig_mw_full/bmwm3gtre46_top.conf car_303_top.conf # PropFO1Trasher
 cp orig_mw_full/bmwm3gtre46.conf car_304.conf # PropFO1StationWagon
 cp orig_mw_full/bmwm3gtre46_top.conf car_304_top.conf # PropFO1StationWagon
-cp orig_mw_full/bmwm3gtre46.conf car_305.conf # PropModern5
-cp orig_mw_full/bmwm3gtre46_top.conf car_305_top.conf # PropModern5
+cp orig_mw_full/eclipsegt.conf car_305.conf # PropModern5
+cp orig_mw_full/eclipsegt_top.conf car_305_top.conf # PropModern5
 cp orig_mw_full/bmwm3gtre46.conf car_306.conf # PropLincoln
 cp orig_mw_full/bmwm3gtre46_top.conf car_306_top.conf # PropLincoln
 cp orig_mw_full/bmwm3gtre46.conf car_307.conf # PropLincolnTaxi
