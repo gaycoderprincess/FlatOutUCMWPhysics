@@ -216,6 +216,20 @@ int GetCarTuning(const std::string& model) {
 	return -1;
 }
 
+UMath::Vector3 GetWheelBaseXZ(Car* car, int wheel) {
+	return car->aTires[GetMWWheelID(wheel)].GetMatrix()->p;
+}
+
+// wheels in fouc are always centered at y 0, so it should be 0 + radius
+float GetWheelBaseY(MWCarTuning* tuning, Car* car, int wheel) {
+	float y = 0.0;
+	y -= car->aTires[GetMWWheelID(wheel)].fRadius * 0.5;
+	y -= car->aTires[GetMWWheelID(wheel)].fRadius * 0.1;
+	y += INCH2METERS(tuning->RIDE_HEIGHT.At(wheel / 2u));
+	y += fTireYPhysOffset;
+	return y;
+}
+
 #define TUNED_VALUE(value, delta) tmp.value = std::lerp(base->value, top->value, delta);
 
 void GetLerpedCarTuning(MWCarTuning& tmp, const std::string& model, float brake, float drivetrain, float engine, float induction, float nitro, float suspension, float tire) {
@@ -374,12 +388,33 @@ void GetLerpedCarTuning(MWCarTuning& tmp, const std::string& model, float brake,
 	while (tmp.GEAR_RATIO[tmp.GEAR_RATIO.size()-1] <= 0.35) { tmp.GEAR_RATIO.pop_back(); }
 }
 
-void GetLerpedCarTuning(MWCarTuning& out, const std::string& model) {
+void GetLerpedCarTuning(MWCarTuning& out, const std::string& model, Car* pCar) {
 	float f = pGameFlow->PreRace.fUpgradeLevel;
 	if (pGameFlow->PreRace.nMode == GM_CAREER) {
-		f = 1.0;
+		f = fUpgradeLevel;
 	}
-	return GetLerpedCarTuning(out, model, f, f, f, f, f, f, f);
+	GetLerpedCarTuning(out, model, f, f, f, f, f, f, f);
+
+	if (bMWWheelPositions) return;
+	if (!pCar) return;
+
+	// derived AC properties
+	auto front = GetWheelBaseXZ(pCar, 0);
+	auto rear = GetWheelBaseXZ(pCar, 2);
+
+	// front_axle = front wheel position
+	out.FRONT_AXLE = front.z;
+
+	// front_axle - wheelbase = rear wheel position
+	out.WHEEL_BASE = front.z - rear.z;
+
+	// distance between wheel centers
+	out.TRACK_WIDTH.Front = std::abs(front.x) * 2;
+	out.TRACK_WIDTH.Rear = std::abs(rear.x) * 2;
+
+	// plus wheel size
+	out.TRACK_WIDTH.Front += out.SECTION_WIDTH.Front * 0.001;
+	out.TRACK_WIDTH.Rear += out.SECTION_WIDTH.Rear * 0.001;
 }
 
 Physics::Tunings* GetVehicleMWTunings(void* veh) {

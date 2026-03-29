@@ -70,6 +70,16 @@ cp orig_mw_full/mustanggt.conf car_25.conf # RoadKing
 cp orig_mw_full/mustanggt_top.conf car_25_top.conf # RoadKing
 cp orig_mw_full/carreragt.conf car_29.conf # BulletGT
 cp orig_mw_full/carreragt_top.conf car_29_top.conf # BulletGT
+cp orig_mw_full/copmidsize.conf car_35.conf # Trailblazer
+cp orig_mw_full/copmidsize.conf car_35_top.conf # Trailblazer
+cp orig_mw_full/copmidsize.conf car_36.conf # Afterburner
+cp orig_mw_full/copmidsize.conf car_36_top.conf # Afterburner
+cp orig_mw_full/copmidsize.conf car_37.conf # Rocket
+cp orig_mw_full/copmidsize.conf car_37_top.conf # Rocket
+cp orig_mw_full/copmidsize.conf car_38.conf # Starflight
+cp orig_mw_full/copmidsize.conf car_38_top.conf # Starflight
+cp orig_mw_full/copmidsize.conf car_39.conf # Nucleon
+cp orig_mw_full/copmidsize.conf car_39_top.conf # Nucleon
 cp orig_cb_full/roadrunner.conf car_40.conf # Pimpster
 cp orig_cb_full/roadrunner_top.conf car_40_top.conf # Pimpster
 cp orig_mw_full/copsport.conf car_41.conf # Flatmobile

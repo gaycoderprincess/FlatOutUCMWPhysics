@@ -69,7 +69,7 @@ public:
 	virtual UMath::Vector3* GetInertiaTensor() {
 		if (vTensorScale.x == 0.0f) {
 			MWCarTuning tune;
-			GetLerpedCarTuning(tune, mCOMObject->Find<IVehicle>()->GetVehicleName());
+			GetLerpedCarTuning(tune, mCOMObject->Find<IVehicle>()->GetVehicleName(), nullptr);
 			vTensorScale.x = tune.TENSOR_SCALE[0];
 			vTensorScale.y = tune.TENSOR_SCALE[1];
 			vTensorScale.z = tune.TENSOR_SCALE[2];

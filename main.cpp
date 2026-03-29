@@ -10,48 +10,21 @@
 
 #include "chloemenulib.h"
 
-void WriteLog(const std::string& str) {
-	static auto file = std::ofstream("FlatOutUCMWPhysics_gcp.log");
-
-	file << str;
-	file << "\n";
-	file.flush();
-}
-
-//#define FUNCTION_LOG(name) WriteLog(std::format("{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)));
-#define WHEEL_FUNCTION_LOG(name) WriteLog(std::format("Wheel::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)));
-#define CHASSIS_FUNCTION_LOG(name) WriteLog(std::format("Chassis::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)));
-#define SUSPENSIONSIMPLE_FUNCTION_LOG(name) WriteLog(std::format("SuspensionSimple::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)));
-#define SUSPENSIONRACER_FUNCTION_LOG(name) WriteLog(std::format("SuspensionRacer::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)));
-#define ENGINERACER_FUNCTION_LOG(name) WriteLog(std::format("EngineRacer::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)));
-//#define ICHASSIS_FUNCTION_LOG(name) WriteLog(std::format("IChassis::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)))
-//#define ITIPTRONIC_FUNCTION_LOG(name) WriteLog(std::format("ITiptronic::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)))
-//#define IRACEENGINE_FUNCTION_LOG(name) WriteLog(std::format("IRaceEngine::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)))
-//#define IENGINEDAMAGE_FUNCTION_LOG(name) WriteLog(std::format("IEngineDamage::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)))
-//#define IINDUCTABLE_FUNCTION_LOG(name) WriteLog(std::format("IInductable::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)))
-//#define ITRANSMISSION_FUNCTION_LOG(name) WriteLog(std::format("ITransmission::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)))
-//#define IENGINE_FUNCTION_LOG(name) WriteLog(std::format("IEngine::{} called from {:X}", name, (uintptr_t)__builtin_return_address(0)))
-#define ICHASSIS_FUNCTION_LOG(name) {}
-#define ITIPTRONIC_FUNCTION_LOG(name) {}
-#define IRACEENGINE_FUNCTION_LOG(name) {}
-#define IENGINEDAMAGE_FUNCTION_LOG(name) {}
-#define IINDUCTABLE_FUNCTION_LOG(name) {}
-#define ITRANSMISSION_FUNCTION_LOG(name) {}
-#define IENGINE_FUNCTION_LOG(name) {}
-
-#define GET_FAKE_INTERFACE(base, type, var) { auto ptr = (uintptr_t)this; ptr += offsetof(base, var); return (type*)ptr; }
-
 #include "d3dhook.h"
 
 bool bRevLimiter = true;
 bool bSpeedbreakerEnabled = true;
+bool bMWWheelPositions = false;
 float fUpgradeLevel = 1.0;
+float fTireYPhysOffset = 0.0;
 CNyaTimer gGlobalTimer;
 
 float fOverrideTimescale = 1.0;
 void OverrideTimescale(float f) {
 	NyaHookLib::Patch<int>(0x5A6071, f * 1000);
 }
+
+#include "util.h"
 
 #include "decomp/ConversionUtil.hpp"
 #include "decomp/UMathExtras.h"
@@ -205,8 +178,6 @@ auto GetPlayerStartPosition(Car* pCar) {
 	return &pEnvironment->aStartpoints[((pCar->pPlayer->nStartPosition-1)%pEnvironment->nNumStartpoints)];
 }
 
-float fTireRadiusMult = 0.5;
-float fTireYOffset = 0.03;
 std::vector<EngineRacer*> aEngines;
 std::vector<SuspensionRacerMW*> aSuspensions;
 void __fastcall DoFO2Downforce(Car* pCar) {
@@ -250,21 +221,22 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	pSuspension->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 
 	for (int i = 0; i < 4; i++) {
+		int mwTireId = GetMWWheelID(i);
 		auto tire = &pCar->aTires[i];
-		//tire->GetMatrix()->p.y = pSuspension->GetWheelLocalPos(i)->y + pSuspension->GetWheelRadius(i);
-		tire->GetMatrix()->p.y = pSuspension->GetWheelLocalPos(i)->y + (tire->fRadius * fTireRadiusMult) + fTireYOffset;
-		float skid = 1.0 - pSuspension->GetWheelTraction(i);
+		tire->GetMatrix()->p = *pSuspension->GetWheelLocalPos(mwTireId);
+		tire->GetMatrix()->p.y += (tire->fRadius * 0.5) + (tire->fRadius * 0.1);
+		float skid = 1.0 - pSuspension->GetWheelTraction(mwTireId);
 		if (ivehicle->IsStaging()) skid = 0.0;
-		tire->fTireSmokeX = pSuspension->mTires[i]->GetLateralSpeed();
+		tire->fTireSmokeX = pSuspension->mTires[mwTireId]->GetLateralSpeed();
 		tire->fTireSmokeZ = skid * 100;
 		tire->fSkidSound1 = skid * 15; // todo this doesn't work?
 		tire->fSkidSound2 = skid * 50; // todo this doesn't work?
-		tire->fTurnSpeed = pSuspension->GetWheelAngularVelocity(i);
+		tire->fTurnSpeed = pSuspension->GetWheelAngularVelocity(mwTireId);
 		tire->pGroundSurface = nullptr;
-		if (tire->bOnGround = pSuspension->IsWheelOnGround(i)) {
-			auto surface = &pEnvironment->aSurfaces[pSuspension->GetWheelRoadSurface(i)];
+		if (tire->bOnGround = pSuspension->IsWheelOnGround(mwTireId)) {
+			auto surface = &pEnvironment->aSurfaces[pSuspension->GetWheelRoadSurface(mwTireId)];
 			tire->pGroundSurface = &pCar->TireDynamics[surface->nDynamics];
-			pCar->nGroundSurfaces[i] = pSuspension->GetWheelRoadSurface(i);
+			pCar->nGroundSurfaces[i] = pSuspension->GetWheelRoadSurface(mwTireId);
 			//pCar->pPlayer->nTimeInAir = 0.0;
 			//pCar->pPlayer->fTimeInAirForBonus = 0.0;
 		}
@@ -453,8 +425,7 @@ void DebugMenu() {
 
 			QuickValueEditor("Mass", pPlayerHost->aPlayers[0]->pCar->fMass);
 			DrawMenuOption(std::format("nGear {}", pPlayerHost->aPlayers[0]->pCar->mGearbox.nGear));
-			QuickValueEditor("fTireRadiusMult", fTireRadiusMult);
-			QuickValueEditor("fTireYOffset", fTireYOffset);
+			//QuickValueEditor("fTireYVisOffset", fTireYVisOffset);
 
 			auto vGroundNormal = *aPlayerInterfaces[0].Find<ICollisionBody>()->GetGroundNormal();
 			DrawMenuOption(std::format("vGroundNormal {:.2f} {:.2f} {:.2f}", vGroundNormal.x, vGroundNormal.y, vGroundNormal.z));
@@ -564,6 +535,9 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 				auto config = toml::parse_file("FlatOutUCMWPhysics_gcp.toml");
 				bSpeedbreakerEnabled = config["speedbreaker"].value_or(bSpeedbreakerEnabled);
 				bRevLimiter = config["rev_limiter"].value_or(bRevLimiter);
+				fUpgradeLevel = config["upgrade_level"].value_or(fUpgradeLevel);
+				fTireYPhysOffset = config["tire_y_offset"].value_or(fTireYPhysOffset);
+				bMWWheelPositions = config["mw_wheel_positions"].value_or(bMWWheelPositions);
 			}
 
 			ApplyMWPhysicsHooks();
