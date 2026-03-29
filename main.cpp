@@ -58,6 +58,8 @@ void OverrideTimescale(float f) {
 #include "decomp/HelperTypes.h"
 
 #include "MWCarTuning.h"
+
+#include "decomp/Physics.h"
 #include "decomp/interfaces/MWInterface.h"
 #include "decomp/interfaces/MWIChassis.h"
 #include "decomp/interfaces/MWIRaceEngine.h"
