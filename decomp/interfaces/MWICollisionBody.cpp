@@ -5,7 +5,9 @@ public:
 	static inline const char* _IIDName = "ICollisionBody";
 
 	Car* pCar;
+	float fMass = 1000.0;
 	UMath::Vector3 vTensorScale = {0.0, 0.0, 0.0};
+	UMath::Vector3 vCenterOfGravity = {0.0, 0.0, 0.0};
 
 	// todo
 	virtual UMath::Vector3* GetForce() {
@@ -19,17 +21,15 @@ public:
 		return &tmp;
 	}
 
+	virtual float GetMass() {
+		return fMass;
+	}
+
 	virtual void SetCenterOfGravity(UMath::Vector3* cog) {
-		//pCar->vCenterOfMass[0] = cog->x;
-		//pCar->vCenterOfMass[1] = cog->y;
-		//pCar->vCenterOfMass[2] = cog->z;
+		vCenterOfGravity = *cog;
 	}
 	virtual UMath::Vector3* GetCenterOfGravity() {
-		static UMath::Vector3 tmp;
-		tmp.x = pCar->vCenterOfMass[0];
-		tmp.y = pCar->vCenterOfMass[1];
-		tmp.z = pCar->vCenterOfMass[2];
-		return &tmp;
+		return &vCenterOfGravity;
 	}
 
 	virtual bool IsInGroundContact() {
@@ -73,6 +73,7 @@ public:
 			vTensorScale.x = tune.TENSOR_SCALE[0];
 			vTensorScale.y = tune.TENSOR_SCALE[1];
 			vTensorScale.z = tune.TENSOR_SCALE[2];
+			fMass = tune.MASS;
 		}
 
 		UMath::Vector3 dim;
@@ -81,7 +82,7 @@ public:
 		dim.z = std::max(std::abs(pCar->vCollisionFullMin.z), std::abs(pCar->vCollisionFullMax.z));
 
 		static UMath::Vector3 tmp;
-		tmp = CalculateInertiaTensor(vTensorScale, pCar->fMass, dim);
+		tmp = CalculateInertiaTensor(vTensorScale, fMass, dim);
 		return &tmp;
 	}
 	virtual void Damp(float amount) {
