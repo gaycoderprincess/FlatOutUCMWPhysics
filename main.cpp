@@ -250,8 +250,8 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 
 	if (bMWNitrous) {
 		pGameFlow->PreRace.fNitroMultiplier = 0.0;
+		pCar->fNitro = pEngine->GetNOSCapacity() * pCar->fMaxNitro;
 	}
-	pCar->fNitro = pEngine->GetNOSCapacity() * pCar->fMaxNitro;
 	if (pCar == pPlayerHost->aPlayers[0]->pCar) {
 		pCar->pPlayer->pIngameHUD->fRPMFraction = pEngine->GetRPM() / 10000.0;
 		pCar->pPlayer->pIngameHUD->nGear = pEngine->GetGear();

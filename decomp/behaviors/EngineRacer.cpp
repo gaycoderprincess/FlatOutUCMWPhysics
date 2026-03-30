@@ -547,7 +547,7 @@ float EngineRacer::DoNos(const Physics::Tunings *tunings, float dT, bool engaged
 	float recharge_rate = 0.0f;
 	IPlayer *player = GetOwner()->GetPlayer();
 
-	if ((!player || player->CanRechargeNOS()) && bMWNitrous) {
+	if (!player || player->CanRechargeNOS()) {
 		float min_speed = mMWInfo->RECHARGE_MIN_SPEED;
 		float max_speed = mMWInfo->RECHARGE_MAX_SPEED;
 		if (speed_mph >= min_speed && mGear >= G_FIRST) {
@@ -568,7 +568,7 @@ float EngineRacer::DoNos(const Physics::Tunings *tunings, float dT, bool engaged
 		if (engaged && mNOSCapacity > 0.0f) {
 			float discharge = dT / nos_discharge;
 			// don't deplete nitrous
-			if (!bMWNitrous || Tweak_InfiniteNOS || GetVehicle()->GetDriverClass() == DRIVER_REMOTE)
+			if (Tweak_InfiniteNOS || GetVehicle()->GetDriverClass() == DRIVER_REMOTE)
 				discharge = 0.0f;
 			// GetCatchupCheat returns 0.0 for human racers, but AI racers get hax
 			discharge *= UMath::Lerp(1.0f, Tweak_MaxNOSDischargeCheat, GetCatchupCheat());
@@ -704,9 +704,7 @@ void EngineRacer::OnTaskSimulate(float dT) {
 	}
 
 	if (nLastRaceState > pGameFlow->nRaceState) {
-		if (bMWNitrous) {
-			ChargeNOS(1.0);
-		}
+		ChargeNOS(1.0);
 		if (auto ply = GetOwner()->GetPlayer()) {
 			ply->ResetGameBreaker(true);
 		}
