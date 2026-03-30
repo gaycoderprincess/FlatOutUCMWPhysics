@@ -547,7 +547,7 @@ float EngineRacer::DoNos(const Physics::Tunings *tunings, float dT, bool engaged
 	float recharge_rate = 0.0f;
 	IPlayer *player = GetOwner()->GetPlayer();
 
-	if (!player || player->CanRechargeNOS()) {
+	if ((!player || player->CanRechargeNOS()) && bMWNitrous) {
 		float min_speed = mMWInfo->RECHARGE_MIN_SPEED;
 		float max_speed = mMWInfo->RECHARGE_MAX_SPEED;
 		if (speed_mph >= min_speed && mGear >= G_FIRST) {
@@ -704,7 +704,9 @@ void EngineRacer::OnTaskSimulate(float dT) {
 	}
 
 	if (nLastRaceState > pGameFlow->nRaceState) {
-		ChargeNOS(1.0);
+		if (bMWNitrous) {
+			ChargeNOS(1.0);
+		}
 		if (auto ply = GetOwner()->GetPlayer()) {
 			ply->ResetGameBreaker(true);
 		}

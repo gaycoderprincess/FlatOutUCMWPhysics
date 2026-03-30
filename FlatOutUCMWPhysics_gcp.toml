@@ -1,2 +1,5 @@
 speedbreaker = true			# enables speedbreaker (toggle with X on the keyboard or R3 on the controller)
+mw_nitrous = false			# makes nitrous behave like Most Wanted, being full at the race start and no longer refilling from prop hits
 rev_limiter = true			# enables the rev limiter, set to false to have higher RPMs
+tire_y_offset = 0.0			# change this if the wheel positions look wrong
+mw_wheel_positions = false		# moves the wheels to where they would be in Most Wanted, ensures handling accuracy but will look very wrong

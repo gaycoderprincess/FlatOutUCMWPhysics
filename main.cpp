@@ -15,6 +15,7 @@
 bool bRevLimiter = true;
 bool bSpeedbreakerEnabled = true;
 bool bMWWheelPositions = false;
+bool bMWNitrous = false;
 float fUpgradeLevel = 1.0;
 float fTireYPhysOffset = 0.0;
 CNyaTimer gGlobalTimer;
@@ -217,6 +218,11 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	}
 
 	ivehicle->OnTaskSimulate(gGlobalTimer.fDeltaTime);
+
+	if (!bMWNitrous) {
+		pEngine->mNOSCapacity = pCar->fNitro / pCar->fMaxNitro;
+	}
+
 	pEngine->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 	pSuspension->OnTaskSimulate(gGlobalTimer.fDeltaTime);
 
@@ -537,6 +543,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 				bRevLimiter = config["rev_limiter"].value_or(bRevLimiter);
 				fUpgradeLevel = config["upgrade_level"].value_or(fUpgradeLevel);
 				fTireYPhysOffset = config["tire_y_offset"].value_or(fTireYPhysOffset);
+				bMWNitrous = config["mw_nitrous"].value_or(bMWNitrous);
 				bMWWheelPositions = config["mw_wheel_positions"].value_or(bMWWheelPositions);
 			}
 
