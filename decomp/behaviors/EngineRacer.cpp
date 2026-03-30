@@ -568,7 +568,7 @@ float EngineRacer::DoNos(const Physics::Tunings *tunings, float dT, bool engaged
 		if (engaged && mNOSCapacity > 0.0f) {
 			float discharge = dT / nos_discharge;
 			// don't deplete nitrous
-			if (Tweak_InfiniteNOS || GetVehicle()->GetDriverClass() == DRIVER_REMOTE)
+			if (!bMWNitrous || Tweak_InfiniteNOS || GetVehicle()->GetDriverClass() == DRIVER_REMOTE)
 				discharge = 0.0f;
 			// GetCatchupCheat returns 0.0 for human racers, but AI racers get hax
 			discharge *= UMath::Lerp(1.0f, Tweak_MaxNOSDischargeCheat, GetCatchupCheat());
