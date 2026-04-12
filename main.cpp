@@ -216,6 +216,8 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 
 		pCar->GetVelocity()->x = 0.0;
 		pCar->GetVelocity()->z = 0.0;
+
+		pCar->GetAngVelocity()->y = 0.0;
 	}
 
 	ivehicle->OnTaskSimulate(gGlobalTimer.fDeltaTime);
@@ -230,8 +232,11 @@ void __fastcall DoFO2Downforce(Car* pCar) {
 	for (int i = 0; i < 4; i++) {
 		int mwTireId = GetMWWheelID(i);
 		auto tire = &pCar->aTires[i];
-		tire->GetMatrix()->p = *pSuspension->GetWheelLocalPos(mwTireId);
-		tire->GetMatrix()->p.y += tire->fRadius + (tire->fRadius * 0.05);
+
+		tire->GetMatrix()->p = *pSuspension->GetWheelPos(mwTireId);
+		ivehicle->mCOMObject->Find<IRigidBody>()->ConvertWorldToLocal(&tire->GetMatrix()->p, true);
+		tire->GetMatrix()->p.y += tire->fRadius;
+
 		float skid = 1.0 - pSuspension->GetWheelTraction(mwTireId);
 		if (ivehicle->IsStaging()) skid = 0.0;
 		tire->fTireSmokeX = pSuspension->mTires[mwTireId]->GetLateralSpeed();

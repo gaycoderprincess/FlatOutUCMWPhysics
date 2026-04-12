@@ -136,10 +136,10 @@ cp orig_mw_full/bmwm3gtre46.conf car_340.conf # PropSedan
 cp orig_mw_full/bmwm3gtre46.conf car_341.conf # VPVWCup
 cp orig_mw_full/caymans.conf car_342.conf # Toyeca
 cp orig_mw_full/a3.conf car_343.conf # Stratum
-cp orig_mw_full/murcielago.conf car_344.conf # Judge
-cp orig_mw_full/murcielago.conf car_345.conf # Judge2
+cp orig_w_full/countach.conf car_344.conf # Judge
+cp orig_w_full/countach.conf car_345.conf # Judge2
 cp orig_mw_full/bmwm3gtre46.conf car_346.conf # PropCraneTruck
-cp orig_mw_full/gallardo.conf car_347.conf # DiabloSV
+cp orig_w_full/diablo.conf car_347.conf # DiabloSV
 cp orig_mw_full/lancerevo8.conf car_348.conf # Evo5
 cp orig_mw_full/bmwm3gtre46.conf car_349.conf # Freeman
 cp orig_mw_full/copsport.conf car_350.conf # CopSport
@@ -160,12 +160,12 @@ cp orig_mw_full/bmwm3gtre46.conf car_364.conf # ItalyCar
 cp orig_mw_full/is300.conf car_365.conf # HLATrabant
 cp orig_mw_full/bmwm3gtre46.conf car_366.conf # DustCar
 cp orig_mw_full/bmwm3gtr.conf car_367.conf # ReVoltBMW
-cp orig_mw_full/gallardo.conf car_368.conf # HQDiabloSV
-cp orig_mw_full/lancerevo8.conf car_369.conf # EvoX
+cp orig_w_full/diablo.conf car_368.conf # HQDiabloSV
+cp orig_w_full/lancerevox.conf car_369.conf # EvoX
 cp orig_cb_full/skyline.conf car_370.conf # SkylineGTR
 cp orig_mw_full/supra.conf car_371.conf # Supra
 cp orig_mw_full/rx8.conf car_372.conf # MazdaRX8
-cp orig_mw_full/punto.conf car_373.conf # DeltaHF
+cp orig_w_full/delta.conf car_373.conf # DeltaHF
 cp orig_mw_full/rx7.conf car_374.conf # RX7Drift
 cp orig_mw_full/rx7.conf car_375.conf # RX7Stock
 cp orig_mw_full/corvettec6r.conf car_376.conf # Tempesta
@@ -176,4 +176,4 @@ cp orig_mw_full/copghost.conf car_380.conf # CopGhost
 cp orig_mw_full/viper.conf car_381.conf # ProStreetViper
 cp orig_mw_full/bmwm3gtre46.conf car_382.conf # BMWM3GTRE46
 cp orig_cb_full/350z.conf car_383.conf # HQ350Z
-cp orig_mw_full/cobaltss.conf car_384.conf # Scirocco
+cp orig_w_full/scirocco.conf car_384.conf # Scirocco
