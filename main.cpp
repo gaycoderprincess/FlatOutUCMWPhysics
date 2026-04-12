@@ -17,6 +17,7 @@ bool bSpeedbreakerEnabled = true;
 bool bMWWheelPositions = false;
 bool bMWNitrous = false;
 float fUpgradeLevel = 1.0;
+bool bUpgradeJunkman = false;
 float fTireYPhysOffset = 0.0;
 CNyaTimer gGlobalTimer;
 
@@ -544,6 +545,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 				bSpeedbreakerEnabled = config["speedbreaker"].value_or(bSpeedbreakerEnabled);
 				bRevLimiter = config["rev_limiter"].value_or(bRevLimiter);
 				fUpgradeLevel = config["upgrade_level"].value_or(fUpgradeLevel);
+				bUpgradeJunkman = config["upgrade_junkman"].value_or(bUpgradeJunkman);
 				fTireYPhysOffset = config["tire_y_offset"].value_or(fTireYPhysOffset);
 				bMWNitrous = config["mw_nitrous"].value_or(bMWNitrous);
 				bMWWheelPositions = config["mw_wheel_positions"].value_or(bMWWheelPositions);

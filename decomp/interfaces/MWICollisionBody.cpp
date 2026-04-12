@@ -68,12 +68,13 @@ public:
 	}
 	virtual UMath::Vector3* GetInertiaTensor() {
 		if (vTensorScale.x == 0.0f) {
-			MWCarTuning tune;
-			GetLerpedCarTuning(tune, mCOMObject->Find<IVehicle>()->GetVehicleName(), nullptr);
+			auto tune = MWCarDataTuned(mCOMObject->Find<IVehicle>()->GetVehicleName(), nullptr);
 			vTensorScale.x = tune.TENSOR_SCALE[0];
 			vTensorScale.y = tune.TENSOR_SCALE[1];
 			vTensorScale.z = tune.TENSOR_SCALE[2];
 			fMass = tune.MASS;
+			WriteLog(std::format("UC mass {:.2f}", pCar->fMass));
+			WriteLog(std::format("MW mass {:.2f}", fMass));
 		}
 
 		UMath::Vector3 dim;

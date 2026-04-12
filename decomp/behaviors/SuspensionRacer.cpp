@@ -105,7 +105,7 @@ static const float HardTurnTightenSpeed = 0.0f;
 static const float Tweak_GameBreakerMaxSteer = 60.0f;
 static const float Tweak_TuningSteering_Ratio = 0.2f;
 
-SuspensionRacerMW::Tire::Tire(float radius, int index, MWCarTuning *mwSpecs)
+SuspensionRacerMW::Tire::Tire(float radius, int index, MWCarDataTuned *mwSpecs)
 	: WheelMW(1), mRadius(UMath::Max(radius, 0.1f)), mWheelIndex(index), mAxleIndex(index >> 1), mMWSpecs(mwSpecs), mBrake(0.0f),
 	  mEBrake(0.0f), mAV(0.0f), mLoad(0.0f), mLateralForce(0.0f), mLongitudeForce(0.0f), mDriveTorque(0.0f), mBrakeTorque(0.0f), mLateralBoost(1.0f),
 	  mTractionBoost(1.0f), mSlip(0.0f), mLastTorque(0.0f), mRoadSpeed(0.0f), mAngularAcc(0.0f), mTraction(1.0f), mBottomOutTime(0.0f),
@@ -420,7 +420,7 @@ void SuspensionRacerMW::OnBehaviorChange() {
 
 Meters SuspensionRacerMW::GetRideHeight(unsigned int idx) {
 	float ride = ChassisMW::GetRideHeight(idx);
-	const Physics::Tunings *tunings = GetVehicleMWTunings(GetVehicle());
+	const Physics::Tunings *tunings = GetVehicleTunings();
 	if (tunings) {
 		ride += INCH2METERS(tunings->Value[Physics::Tunings::RIDEHEIGHT]);
 	}
@@ -459,7 +459,7 @@ void SuspensionRacerMW::OnTaskSimulate(float dT) {
 	nLastRaceState = pGameFlow->nRaceState;
 
 	float ride_extra = 0.0f;
-	const Physics::Tunings *tunings = GetVehicleMWTunings(GetVehicle());
+	const Physics::Tunings *tunings = GetVehicleTunings();
 	if (tunings) {
 		ride_extra = tunings->Value[Physics::Tunings::RIDEHEIGHT];
 	}
@@ -642,7 +642,7 @@ float SuspensionRacerMW::CalculateMaxSteering(State &state, SteeringType steer_t
 	max_steering *= BrakeSteeringRangeMultiplier * tbcoeff * SteeringSpeedTable.GetValue(state.local_vel.z) + 1.0f;
 	max_steering *= SteeringRangeCoeffTable.GetValue(std::abs(mSteering.InputAverage.GetValue()));
 
-	const Physics::Tunings *tunings = GetVehicleMWTunings(GetVehicle());
+	const Physics::Tunings *tunings = GetVehicleTunings();
 	if (tunings) {
 		max_steering *= tunings->Value[Physics::Tunings::STEERING] * Tweak_TuningSteering_Ratio + 1.0f;
 	}
@@ -997,7 +997,7 @@ void SuspensionRacerMW::TuneWheelParams(State &state) {
 
 	float brake_biased[2] = {state.brake_input, state.brake_input};
 	yawcontrol *= (1.0f - mDrift.Value); // pointless parentheses for matching purposes
-	const Physics::Tunings *tunings = GetVehicleMWTunings(GetVehicle());
+	const Physics::Tunings *tunings = GetVehicleTunings();
 	if (tunings) {
 		// brake tuning adjusts the brake bias
 		brake_biased[0] += brake_biased[0] * tunings->Value[Physics::Tunings::BRAKES] * 0.5f;
@@ -1234,7 +1234,7 @@ void SuspensionRacerMW::DoWheelForces(State &state) {
 	const float mass = state.mass;
 
 	float ride_extra = 0.0f;
-	const Physics::Tunings *tunings = GetVehicleMWTunings(GetVehicle());
+	const Physics::Tunings *tunings = GetVehicleTunings();
 	if (tunings) {
 		ride_extra = tunings->Value[Physics::Tunings::RIDEHEIGHT];
 	}

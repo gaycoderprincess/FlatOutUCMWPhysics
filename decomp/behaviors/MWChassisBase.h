@@ -81,7 +81,7 @@ public:
 	IEngineDamage *mEngineDamage;
 	ISpikeable *mSpikeDamage;
 	Car* pCar;
-	MWCarTuning* mMWAttributes;
+	MWCarDataTuned* mMWAttributes;
 	float mJumpTime;
 	float mJumpAlititude;
 	float mTireHeat;
@@ -92,6 +92,10 @@ public:
 
 	IVehicle* GetVehicle() {
 		return GetOwner()->Find<IVehicle>();
+	}
+
+	Physics::Tunings* GetVehicleTunings() {
+		return GetVehicleMWTunings(pCar);
 	}
 
 	int nLastRaceState;

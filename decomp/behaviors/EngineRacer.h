@@ -88,7 +88,7 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 	void AutoShift(float dT);
 
 	Physics::Tunings* GetVehicleTunings() {
-		return GetVehicleMWTunings(GetVehicle());
+		return GetVehicleMWTunings(pCar);
 	}
 
 	~EngineRacer();
@@ -321,7 +321,7 @@ class EngineRacer : public IEngine, public IEngineDamage, public IRaceEngine, pu
 	IInput *mIInput;
 	IChassis *mSuspension;
 	ICheater *mCheater;
-	MWCarTuning* mMWInfo;
+	MWCarDataTuned* mMWInfo;
 	Car* pCar;
 	float mRPM;
 	ShiftStatus mShiftStatus;
