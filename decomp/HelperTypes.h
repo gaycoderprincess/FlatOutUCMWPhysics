@@ -300,17 +300,9 @@ namespace Physics {
 	};
 }
 
-class WCollisionTri {
-public:
-	UMath::Vector3 fPt0;
-	UMath::Vector3 fPt1;
-	unsigned int fFlags;
-	UMath::Vector3 fPt2;
-};
-
 class WWorldPos {
 public:
-	WCollisionTri fFace;
+	UMath::Vector3 fHitPosition;
 	float fYOffset;
 	int fSurface;
 
@@ -334,6 +326,8 @@ public:
 		prop.fMaxDistance = 10000;
 		tLineOfSightOut out;
 		if (CheckLineOfSight(&prop, pGameFlow->pHost->pUnkForLOS, &origin, &dir, &out)) {
+			if (std::abs(out.vHitNormal.y) < 0.05) return false; // skip walls
+
 			if (out.vHitNormal.y < 0) {
 				out.vHitNormal *= -1;
 			}
@@ -401,13 +395,28 @@ enum DriverClass {
 };
 
 void ConvertWorldToLocal(Car* pCar, UMath::Vector3 &val, bool translate) {
-	UMath::Vector4 invorient;
+	UMath::Matrix4 invorient;
 
 	if (translate) {
-		UMath::Sub(val, pCar->GetMatrix()->p, val);
+		UMath::Vector3 pos = pCar->GetMatrix()->p;
+		UMath::Sub(val, pos, val);
 	}
-	UMath::Transpose(*pCar->GetQuaternion(), invorient);
-	UMath::Rotate(&val, &invorient, &val);
+
+	auto mat = *pCar->GetMatrix();
+	mat.p = {0,0,0};
+	UMath::Transpose(&mat, invorient);
+
+	UMath::Rotate(val, invorient, val);
+}
+
+void ConvertLocalToWorld(Car* pCar, UMath::Vector3 &val, bool translate) {
+	auto mat = *pCar->GetMatrix();
+	mat.p = {0,0,0};
+	UMath::Rotate(val, mat, val);
+	if (translate) {
+		UMath::Vector3 pos = pCar->GetMatrix()->p;
+		UMath::Add(val, pos, val);
+	}
 }
 
 namespace Sim {
@@ -424,8 +433,21 @@ public:
 };
 
 SimSurface* GetSimSurface(int surfaceType) {
+	float gripMod = 1.0f / pEnvironment->aSurfaces[surfaceType].fBodyFriction;
+	if (gripMod > 0.98f) gripMod = 1.0f; // some tracks have road as 0.99 grip
+
 	static SimSurface tmp;
-	tmp.LATERAL_GRIP = tmp.DRIVE_GRIP = UMath::Clamp(1.0f / pEnvironment->aSurfaces[surfaceType].fBodyFriction, 0.5f, 1.0f);
+	tmp.LATERAL_GRIP = tmp.DRIVE_GRIP = UMath::Clamp(gripMod, 0.5f, 1.0f);
 	tmp.ROLLING_RESISTANCE = 1.0 + (((1.0 / tmp.DRIVE_GRIP) - 1.0) * 3);
 	return &tmp;
+}
+
+namespace Dynamics {
+	namespace Aero {
+		void Drag(UMath::Vector3 &pThis, const UMath::Vector3 &vel, const UMath::Vector3 &C, const UMath::Vector3 &A, double q) {
+			pThis = A * vel;
+			pThis *= C;
+			pThis *= (vel.length() * -0.5 * q);
+		}
+	}
 }

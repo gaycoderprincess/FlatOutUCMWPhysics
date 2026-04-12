@@ -14,7 +14,7 @@ public:
 		return str.c_str();
 	}
 	virtual int GetDriverStyle() { return STYLE_RACING; }
-	virtual int GetDriverClass() { return DRIVER_HUMAN; }
+	virtual int GetDriverClass() { return pCar->pPlayer->nPlayerType == PLAYERTYPE_LOCAL ? DRIVER_HUMAN : DRIVER_RACER; }
 	virtual float GetSpeedometer() { return mCOMObject->Find<ITransmission>()->GetSpeedometer(); }
 	virtual float GetSpeed() { // this is so weird and useless
 		UMath::Vector3 vel = *pCar->GetVelocity();

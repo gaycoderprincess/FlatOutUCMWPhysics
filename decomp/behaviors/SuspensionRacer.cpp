@@ -392,6 +392,7 @@ void SuspensionRacerMW::CreateTires() {
 		bool is_front = IsFront(i);
 		float diameter = Physics::Info::WheelDiameter(mMWAttributes, is_front);
 		mTires[i] = new Tire(diameter * 0.5f, i, mMWAttributes);
+		//mTires[i] = new Tire(pCar->tyres[GetMWWheelID(i)].data.radius, i, mMWAttributes);
 	}
 
 	UMath::Vector3 dimension;
@@ -467,7 +468,7 @@ void SuspensionRacerMW::OnTaskSimulate(float dT) {
 
 	State state;
 	ComputeState(dT, state);
-	LastChassisState = state;
+	lastState = state;
 
 	mSteering.CollisionTimer = UMath::Max(mSteering.CollisionTimer - state.time, 0.0f);
 	mGameBreaker = 0.0f;
@@ -541,9 +542,7 @@ UMath::Vector3* SuspensionRacerMW::GetWheelCenterPos(UMath::Vector3* result, uns
 	} else {
 		// GetPosition is wrong when the wheels are free
 		if (!mTires[i]->IsOnGround()) {
-			UMath::Matrix4 matrix;
-			mRB->GetMatrix4(&matrix);
-			matrix.p = UMath::Vector4Make(*mRB->GetPosition(), 1.0f);
+			auto matrix = lastState.matrix;
 			UMath::Vector3 p(mTires[i]->GetLocalArm());
 			UMath::RotateTranslate(p, matrix, p);
 			*result = p;
@@ -599,11 +598,7 @@ float SuspensionRacerMW::DoHumanSteering(State &state) {
 
 	//IPlayer *player = GetOwner()->GetPlayer();
 	//if (player) {
-	//	ISteeringWheel *device = player->GetSteeringDevice();
-	//
-	//	if (device && device->IsConnected()) {
-	//		steer_type = device->GetSteeringType();
-	//	}
+	//	steer_type = player->GetSteeringType();
 	//}
 
 	float max_steering;
@@ -727,8 +722,8 @@ void SuspensionRacerMW::DoSteering(State &state, UMath::Vector3 &right, UMath::V
 	}
 
 	ComputeAckerman(truesteer, state, &l4, &r4);
-	right = Vector4To3(r4);
-	left = Vector4To3(l4);
+	right = UMath::Vector4To3(r4);
+	left = UMath::Vector4To3(l4);
 	mSteering.Wheels[0] = l4.w;
 	mSteering.Wheels[1] = r4.w;
 	DoWallSteer(state);
@@ -1014,19 +1009,9 @@ void SuspensionRacerMW::TuneWheelParams(State &state) {
 		brake_biased[1] -= brake_biased[1] * tunings->Value[Physics::Tunings::BRAKES] * 0.5f;
 	}
 	float suspension_yaw_control_limit = CalcYawControlLimit(state.speed);
-	//IPlayer *player = GetOwner()->GetPlayer();
 	if (state.driver_style == STYLE_DRAG) {
 		suspension_yaw_control_limit = 0.1f;
 	}
-	//else if (player) {
-	//	PlayerSettings *settings = player->GetSettings();
-	//	if (settings) {
-	//		// increase yaw control limit when stability control is off (unused by normal means)
-	//		if (!settings->Handling) {
-	//			suspension_yaw_control_limit += 2.5f;
-	//		}
-	//	}
-	//}
 
 	float max_slip = 0.0f;
 	int max_slip_wheel = 0;

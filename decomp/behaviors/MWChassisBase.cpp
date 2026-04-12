@@ -256,8 +256,7 @@ void ChassisMW::SetCOG(float extra_bias, float extra_ride) {
 		fwbias = 0.5f;
 	}
 	float cg_z = (front_z - rear_z) * fwbias + rear_z;
-	float cg_y = INCH2METERS(mMWAttributes->ROLL_CENTER) - (dim.y + extra_ride);
-
+	float cg_y = INCH2METERS(mMWAttributes->ROLL_CENTER) - (dim.y + INCH2METERS(extra_ride));
 	UMath::Vector3 cog(0.0f, cg_y, cg_z);
 	mRBComplex->SetCenterOfGravity(&cog);
 }
@@ -269,7 +268,8 @@ void ChassisMW::ComputeState(float dT, ChassisMW::State &state) {
 	mRB->GetDimension(&state.dimension);
 
 	mRB->GetMatrix4(&state.matrix);
-	state.matrix.p = UMath::Vector4Make(*mRB->GetPosition(), 1.0f);
+	state.matrix.p = *mRB->GetPosition();
+	state.matrix.pw = 1.0;
 
 	state.local_vel = *mRB->GetLinearVelocity();
 	state.linear_vel = state.local_vel;

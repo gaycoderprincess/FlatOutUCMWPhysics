@@ -30,16 +30,16 @@ public:
 		enum Flags { IS_STAGING = 1, IS_DESTROYED };
 
 		const UMath::Vector3 &GetRightVector() const {
-			return *(UMath::Vector3*)&matrix.x;
+			return matrix.x;
 		}
 		const UMath::Vector3 &GetUpVector() const {
-			return *(UMath::Vector3*)&matrix.y;
+			return matrix.y;
 		}
 		const UMath::Vector3 &GetForwardVector() const {
-			return *(UMath::Vector3*)&matrix.z;
+			return matrix.z;
 		}
 		const UMath::Vector3 &GetPosition() const {
-			return *(UMath::Vector3*)&matrix.p;
+			return matrix.p;
 		}
 	};
 

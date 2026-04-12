@@ -443,6 +443,8 @@ void DebugMenu() {
 			auto vCenterOfMassAbsolute = *(UMath::Vector3*)pPlayerHost->aPlayers[0]->pCar->vCenterOfMassAbsolute;
 			DrawMenuOption(std::format("vCenterOfMass {:.2f} {:.2f} {:.2f}", vCenterOfMass.x, vCenterOfMass.y, vCenterOfMass.z));
 			DrawMenuOption(std::format("vCenterOfMassAbsolute {:.2f} {:.2f} {:.2f}", vCenterOfMassAbsolute.x, vCenterOfMassAbsolute.y, vCenterOfMassAbsolute.z));
+
+			auto& LastChassisState = aSuspensions[0]->lastState;
 			DrawMenuOption(std::format("state.inertia {:.2f} {:.2f} {:.2f}", LastChassisState.inertia.x, LastChassisState.inertia.y, LastChassisState.inertia.z));
 			DrawMenuOption(std::format("state.linear_vel {:.2f} {:.2f} {:.2f}", LastChassisState.linear_vel.x, LastChassisState.linear_vel.y, LastChassisState.linear_vel.z));
 			DrawMenuOption(std::format("state.angular_vel {:.2f} {:.2f} {:.2f}", LastChassisState.angular_vel.x, LastChassisState.angular_vel.y, LastChassisState.angular_vel.z));

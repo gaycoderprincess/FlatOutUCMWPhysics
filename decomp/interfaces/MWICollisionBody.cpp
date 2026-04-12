@@ -36,15 +36,18 @@ public:
 		static UMath::Vector3 normal;
 		normal = {0,1,0};
 
-		auto origin = pCar->GetMatrix()->p;
-		origin.y += 2;
+		auto mat = *pCar->GetMatrix();
+
+		if (mat.y.y > 0.5) return false; // when upright, we'll rely on wheel contact for now
+
+		auto origin = mat.p;
 		auto dir = NyaVec3(0,-1,0);
 
 		tLineOfSightIn prop;
 		prop.fMaxDistance = 10000;
 		tLineOfSightOut out;
 		if (CheckLineOfSight(&prop, pGameFlow->pHost->pUnkForLOS, &origin, &dir, &out)) {
-			return out.fHitDistance > 2.5;
+			return out.fHitDistance < 1.5;
 		}
 		return false;
 	}
@@ -52,8 +55,7 @@ public:
 		static UMath::Vector3 normal;
 		normal = {0,1,0};
 
-		auto origin = pCar->GetMatrix()->p;
-		origin.y += 2;
+		UMath::Vector3 origin = pCar->GetMatrix()->p;
 		auto dir = NyaVec3(0,-1,0);
 
 		tLineOfSightIn prop;
