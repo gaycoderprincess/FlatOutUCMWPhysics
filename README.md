@@ -31,7 +31,7 @@ I have recently discovered that the latter project uses AI, so while this mod wa
 
 Building is done on an Arch Linux system with CLion and vcpkg being used for the build process. 
 
-Before you begin, clone [nya-common](https://github.com/gaycoderprincess/nya-common), [nya-common-fouc](https://github.com/gaycoderprincess/nya-common-fouc) and [CwoeeMenuLib](https://github.com/gaycoderprincess/CwoeeMenuLib) to folders next to this one, so they can be found.
+Before you begin, clone [nya-common](https://github.com/gaycoderprincess/nya-common), [nya-common-fouc](https://github.com/gaycoderprincess/nya-common-fouc), [AssettoCorsaMWPhysics](https://github.com/gaycoderprincess/AssettoCorsaMWPhysics) and [CwoeeMenuLib](https://github.com/gaycoderprincess/CwoeeMenuLib) to folders next to this one, so they can be found.
 
 Required packages: `mingw-w64-gcc`
 

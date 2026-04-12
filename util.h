@@ -42,3 +42,21 @@ int GetMWWheelID(int acWheel) {
 			return 2;
 	}
 }
+
+bool IsPlayerCar(Car* car) {
+	return car->pPlayer->nPlayerType == PLAYERTYPE_LOCAL;
+}
+
+float GetCarUpgradeLevel(Car* car) {
+	if (pGameFlow->PreRace.nMode == GM_CAREER) {
+		return fUpgradeLevel;
+	}
+	return pGameFlow->PreRace.fUpgradeLevel;
+}
+
+bool GetCarJunkman(Car* car) {
+	if (pGameFlow->PreRace.nMode == GM_CAREER) {
+		return bUpgradeJunkman;
+	}
+	return pGameFlow->PreRace.fUpgradeLevel > 1.0;
+}

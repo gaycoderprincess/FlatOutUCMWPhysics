@@ -32,7 +32,7 @@ void OverrideTimescale(float f) {
 #include "decomp/UMathExtras.h"
 #include "decomp/HelperTypes.h"
 
-#include "MWCarTuning.h"
+#include "../AssettoCorsaMWPhysics/MWCarTuning.h"
 
 #include "decomp/Physics.h"
 #include "decomp/interfaces/MWInterface.h"
