@@ -539,6 +539,16 @@ UMath::Vector3* SuspensionRacerMW::GetWheelCenterPos(UMath::Vector3* result, uns
 	if (!mRB) {
 		return result;
 	} else {
+		// GetPosition is wrong when the wheels are free
+		if (!mTires[i]->IsOnGround()) {
+			UMath::Matrix4 matrix;
+			mRB->GetMatrix4(&matrix);
+			matrix.p = UMath::Vector4Make(*mRB->GetPosition(), 1.0f);
+			UMath::Vector3 p(mTires[i]->GetLocalArm());
+			UMath::RotateTranslate(p, matrix, p);
+			*result = p;
+		}
+
 		UMath::Vector3 tmp;
 		mRB->GetUpVector(&tmp);
 		UMath::ScaleAdd(tmp, GetWheelRadius(i), *result, *result);

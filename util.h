@@ -44,6 +44,7 @@ int GetMWWheelID(int acWheel) {
 }
 
 bool IsPlayerCar(Car* car) {
+	if (!car) return false;
 	return car->pPlayer->nPlayerType == PLAYERTYPE_LOCAL;
 }
 
